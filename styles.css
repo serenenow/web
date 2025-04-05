@@ -1,6 +1,6 @@
 :root {
-  --primary-color: #a8e0d1;
-  --primary-dark: #8ecfbd;
+  --primary-color: #C8E8E3;
+  --primary-dark: #b4d9d3;
   --text-color: #333333;
   --light-bg: #f5f5f5;
   --white: #ffffff;
@@ -110,7 +110,7 @@ header {
 /* Platform Intro */
 .platform-intro {
   padding: 60px 0;
-  background-color: var(--primary-color);
+  background-color: var(--white);
 }
 
 .platform-intro h2 {
@@ -220,7 +220,7 @@ header {
 /* Contact */
 .contact {
   padding: 60px 0;
-  background-color: var(--white);
+  background-color: var(--primary-color);
 }
 
 form {
@@ -249,9 +249,30 @@ textarea {
 
 /* Footer */
 footer {
-  background-color: var(--primary-color);
-  padding: 20px 0;
+  background-color: var(--white);
+  padding: 40px 0;
   text-align: center;
+  border-top: 1px solid #eee;
+}
+
+footer .links {
+  margin-bottom: 20px;
+}
+
+footer .links a {
+  color: var(--text-color);
+  text-decoration: none;
+  margin: 0 15px;
+  font-size: 0.9rem;
+}
+
+footer .links a:hover {
+  text-decoration: underline;
+}
+
+footer .copyright {
+  color: #666;
+  font-size: 0.85rem;
 }
 
 /* Responsive */
