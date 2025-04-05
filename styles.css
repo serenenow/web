@@ -223,28 +223,79 @@ header {
   background-color: var(--primary-color);
 }
 
-form {
-  max-width: 600px;
+.contact-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
-.form-group {
+.contact-info {
+  flex: 1;
+  text-align: left;
+}
+
+.contact-info h2 {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.contact-item {
   margin-bottom: 20px;
+  display: flex;
+  align-items: center;
 }
 
-input,
-textarea {
-  width: 100%;
-  padding: 12px 15px;
-  border: 1px solid #ddd;
+.contact-item p {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.contact-item a {
+  color: var(--text-color);
+  text-decoration: none;
+}
+
+.contact-item a:hover {
+  text-decoration: underline;
+}
+
+.social-links {
+  margin-top: 30px;
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 10px 0 0;
+  border-radius: 50%;
+  background-color: var(--text-color);
+  color: var(--white);
+  text-decoration: none;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.social-icon:hover {
+  transform: translateY(-2px);
+  background-color: var(--black);
+}
+
+.social-icon i {
+  font-size: 18px;
+}
+
+form {
+  flex: 1;
+  max-width: none;
+  margin: 0;
+  background-color: var(--white);
+  padding: 30px;
   border-radius: var(--border-radius);
-  font-family: inherit;
-  font-size: 1rem;
-}
-
-textarea {
-  min-height: 150px;
-  resize: vertical;
+  box-shadow: var(--box-shadow);
 }
 
 /* Footer */
@@ -255,14 +306,39 @@ footer {
   border-top: 1px solid #eee;
 }
 
-footer .links {
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-logo {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.brand span {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+footer .links {
+  margin: 0;
 }
 
 footer .links a {
   color: var(--text-color);
   text-decoration: none;
-  margin: 0 15px;
+  margin: 0 0 0 30px;
   font-size: 0.9rem;
 }
 
@@ -273,6 +349,7 @@ footer .links a:hover {
 footer .copyright {
   color: #666;
   font-size: 0.85rem;
+  margin: 0;
 }
 
 /* Responsive */
@@ -287,6 +364,40 @@ footer .copyright {
 
   h2 {
     font-size: 1.75rem;
+  }
+
+  .contact-wrapper {
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .contact-info {
+    text-align: center;
+  }
+
+  .contact-info h2 {
+    text-align: center;
+  }
+
+  .contact-item {
+    justify-content: center;
+  }
+
+  .social-links {
+    text-align: center;
+  }
+
+  .social-icon {
+    margin: 0 5px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  footer .links a {
+    margin: 0 15px;
   }
 }
 
@@ -310,5 +421,29 @@ footer .copyright {
   h2 {
     font-size: 1.5rem;
   }
+}
+
+form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+textarea {
+  min-height: 150px;
+  resize: vertical;
 }
 
