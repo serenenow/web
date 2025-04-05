@@ -154,7 +154,11 @@
           </div>
         </div>
 
-        <form id="contact-form">
+        <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+          <p class="hidden">
+            <label>Don't fill this out if you're human: <input name="bot-field" /></label>
+          </p>
+          <input type="hidden" name="form-name" value="contact" />
           <div class="form-group">
             <input type="text" id="name" name="name" placeholder="Name" required>
           </div>

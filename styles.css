@@ -447,3 +447,7 @@ textarea {
   resize: vertical;
 }
 
+.hidden {
+  display: none;
+}
+

@@ -29,21 +29,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (contactForm) {
     contactForm.addEventListener("submit", (e) => {
-      e.preventDefault()
+      // Netlify handles the form submission
+      // We just need to handle the success message
+      const button = contactForm.querySelector("button[type='submit']")
+      const originalText = button.textContent
+      
+      const showSuccess = () => {
+        button.textContent = "Message Sent!"
+        button.style.backgroundColor = "#4CAF50"
+        contactForm.reset()
+        
+        setTimeout(() => {
+          button.textContent = originalText
+          button.style.backgroundColor = ""
+        }, 3000)
+      }
 
-      // Get form values
-      const name = document.getElementById("name").value
-      const email = document.getElementById("email").value
-      const message = document.getElementById("message").value
-
-      // Here you would typically send the form data to a server
-      // For GitHub Pages, you might use a service like Formspree
-
-      // For now, just show an alert
-      alert(`Thank you, ${name}! Your message has been received. We'll get back to you soon.`)
-
-      // Reset the form
-      contactForm.reset()
+      // If the form is submitted successfully, Netlify will handle the redirect
+      // But we'll show a success message anyway
+      setTimeout(showSuccess, 1000)
     })
   }
 })
