@@ -1,4 +1,18 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Handle URL hash for FAQ section
+  const scrollToSection = () => {
+    if (window.location.hash === '#faq') {
+      const faqSection = document.getElementById('faq')
+      if (faqSection) {
+        faqSection.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+  }
+
+  // Check hash on page load and when hash changes
+  scrollToSection()
+  window.addEventListener('hashchange', scrollToSection)
+
   // Accordion functionality
   const accordionItems = document.querySelectorAll(".accordion-item")
 
