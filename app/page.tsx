@@ -669,30 +669,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="container mx-auto px-6 py-20">
-        <div className="bg-gradient-to-r from-mint-dark to-mint rounded-3xl p-12 text-center text-white">
-          <h2 className="text-4xl font-bold mb-4">Trusted by modern mental health professionals</h2>
-          <p className="text-xl mb-8 text-white/90">
-            Join thousands of therapists who've simplified their practice with SereneNow
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-white text-mint-dark hover:bg-white/90 px-8 py-4 text-lg">
-              Start for Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-white text-white hover:bg-white hover:text-mint-dark px-8 py-4 text-lg"
-            >
-              Schedule a Demo
-            </Button>
-          </div>
-          <p className="text-sm text-white/70 mt-6">No credit card required • 14-day free trial • Cancel anytime</p>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="container mx-auto px-6 py-8 border-t border-mint/10">
         <div className="flex flex-col md:flex-row items-center justify-between">
