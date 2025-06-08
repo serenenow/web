@@ -15,10 +15,19 @@ export function MainNav() {
   const navItems = [
     { name: "Features", href: "#features" },
     { name: "Pricing", href: "#pricing" },
-    { name: "Testimonials", href: "#testimonials" },
-    { name: "Our Story", href: "#story" },
+    { name: "About", href: "#story" },
     { name: "FAQ", href: "#faq" },
+    { name: "Contact", href: "#contact" },
   ]
+
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault()
+    const element = document.querySelector(href)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" })
+      setIsMenuOpen(false)
+    }
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-mint/20">
@@ -26,9 +35,7 @@ export function MainNav() {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <a href="#" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-mint-dark to-mint rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">SN</span>
-              </div>
+              <img src="/favicon.png" alt="SereneNow Logo" className="w-8 h-8" />
               <span className="text-2xl font-bold bg-gradient-to-r from-indigo via-mint-dark to-indigo bg-clip-text text-transparent">
                 SereneNow
               </span>
@@ -42,11 +49,12 @@ export function MainNav() {
                 key={item.name}
                 href={item.href}
                 className="text-charcoal hover:text-mint-dark transition-colors font-medium"
+                onClick={(e) => scrollToSection(e, item.href)}
               >
                 {item.name}
               </a>
             ))}
-            <Button className="bg-mint-dark hover:bg-mint-dark/90 text-white">Sign In</Button>
+
           </div>
 
           {/* Mobile Menu Button */}
@@ -70,12 +78,12 @@ export function MainNav() {
                 key={item.name}
                 href={item.href}
                 className="text-charcoal hover:text-mint-dark transition-colors py-2 font-medium"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={(e) => scrollToSection(e, item.href)}
               >
                 {item.name}
               </a>
             ))}
-            <Button className="bg-mint-dark hover:bg-mint-dark/90 text-white w-full">Sign In</Button>
+
           </div>
         </div>
       </div>

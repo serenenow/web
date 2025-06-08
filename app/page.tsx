@@ -4,13 +4,17 @@ import {
   Check,
   ChevronDown,
   CreditCard,
+  Facebook,
   FileText,
+  Instagram,
   Lock,
   Mail,
+  MapPin,
   MessageSquare,
   Phone,
   Smartphone,
   Star,
+  Twitter,
   Users,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -92,8 +96,8 @@ export default function LandingPage() {
       {/* Typing Animation Section */}
       <section className="container mx-auto px-6 py-16 bg-gradient-to-r from-mint/20 via-white to-mint/20 rounded-3xl">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-charcoal mb-8">What can I do with SereneNow?</h2>
-          <div className="h-20">
+          <h2 className="text-2xl md:text-3xl font-bold text-charcoal mb-8">What can I do with SereneNow?</h2>
+          <div className="h-24 text-xl md:text-2xl">
             <TypewriterEffect />
           </div>
         </div>
@@ -228,85 +232,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Trust Section */}
-      <section id="testimonials" className="container mx-auto px-6 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-charcoal mb-4">Trusted by therapists everywhere</h2>
-          <p className="text-xl text-charcoal/70">See what mental health professionals are saying</p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card className="p-6 border-mint/10">
-            <CardContent className="p-0 space-y-4">
-              <div className="flex space-x-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-              <p className="text-charcoal/80 italic">
-                "SereneNow made my practice simpler and more secure. I can focus on my clients instead of managing
-                multiple apps."
-              </p>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-mint/20 rounded-full flex items-center justify-center">
-                  <span className="text-mint-dark font-semibold">DR</span>
-                </div>
-                <div>
-                  <p className="font-semibold text-charcoal">Dr. Rachel Martinez</p>
-                  <p className="text-sm text-charcoal/60">Licensed Therapist</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="p-6 border-coral/10">
-            <CardContent className="p-0 space-y-4">
-              <div className="flex space-x-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-              <p className="text-charcoal/80 italic">
-                "The payment processing is seamless, and my clients love the easy booking system. It's transformed how I
-                run my practice."
-              </p>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-coral/20 rounded-full flex items-center justify-center">
-                  <span className="text-coral font-semibold">MC</span>
-                </div>
-                <div>
-                  <p className="font-semibold text-charcoal">Michael Chen</p>
-                  <p className="text-sm text-charcoal/60">Clinical Psychologist</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="p-6 border-mint/10">
-            <CardContent className="p-0 space-y-4">
-              <div className="flex space-x-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-              <p className="text-charcoal/80 italic">
-                "Finally, a platform that understands the unique needs of mental health professionals. The security
-                features give me complete confidence."
-              </p>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-mint/20 rounded-full flex items-center justify-center">
-                  <span className="text-mint-dark font-semibold">SJ</span>
-                </div>
-                <div>
-                  <p className="font-semibold text-charcoal">Sarah Johnson</p>
-                  <p className="text-sm text-charcoal/60">Marriage Counselor</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
       {/* Pricing Section */}
       <section id="pricing" className="container mx-auto px-6 py-20">
         <div className="text-center mb-16">
@@ -432,7 +357,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Why We Built SereneNow Section */}
+      {/* About Section */}
       <section id="story" className="container mx-auto px-6 py-20 bg-gradient-to-br from-mint/20 to-mint-light/30">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
@@ -449,9 +374,6 @@ export default function LandingPage() {
                     alt="Co-founder portrait"
                     className="w-full h-full object-cover"
                   />
-                </div>
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-mint-dark rounded-full flex items-center justify-center shadow-lg">
-                  <span className="text-white text-2xl">💙</span>
                 </div>
               </div>
             </div>
@@ -474,10 +396,10 @@ export default function LandingPage() {
               <div className="pt-6 border-t border-mint-dark/20">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-mint/20 rounded-full flex items-center justify-center">
-                    <span className="text-mint-dark font-semibold text-sm">PS</span>
+                    <span className="text-mint-dark font-semibold text-sm">MJ</span>
                   </div>
                   <div>
-                    <p className="font-semibold text-charcoal">Priya Sharma</p>
+                    <p className="font-semibold text-charcoal">Manasi Jagtap</p>
                     <p className="text-charcoal/70 text-sm">Licensed Therapist & Co-founder of SereneNow</p>
                   </div>
                 </div>
@@ -561,105 +483,65 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Contact Us Section */}
+      {/* Contact Section */}
       <section id="contact" className="bg-mint py-20">
         <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-charcoal mb-4">Get in Touch</h2>
-              <p className="text-xl text-charcoal/70">
-                Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
-              </p>
+              <h2 className="text-4xl font-bold text-charcoal mb-4">Get in touch</h2>
             </div>
-
-            <div className="grid lg:grid-cols-2 gap-12">
-              {/* Contact Information */}
-              <div className="space-y-8">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Contact Info */}
+              <div className="flex flex-col justify-center space-y-8">
                 <div>
-                  <h3 className="text-2xl font-semibold text-charcoal mb-6">Contact Information</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-mint-dark/10 rounded-lg flex items-center justify-center">
-                        <Mail className="h-6 w-6 text-mint-dark" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-charcoal">Email</p>
-                        <p className="text-charcoal/70">hello@serenenow.in</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-mint-dark/10 rounded-lg flex items-center justify-center">
-                        <Phone className="h-6 w-6 text-mint-dark" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-charcoal">Phone</p>
-                        <p className="text-charcoal/70">+91 98765 43210</p>
-                      </div>
-                    </div>
+                  <h2 className="text-2xl font-semibold text-charcoal mb-6">Contact us</h2>
+                  <a
+                    href="mailto:admin@serenenow.in"
+                    className="text-charcoal hover:text-mint-dark transition-colors block mb-4"
+                  >
+                    admin@serenenow.in
+                  </a>
+                  <div className="space-y-1">
+                    <div className="text-charcoal">Pune, Maharashtra</div>
+                    <div className="text-charcoal">India</div>
                   </div>
                 </div>
-
-                <div className="bg-white/50 p-6 rounded-2xl">
-                  <h4 className="font-semibold text-charcoal mb-3">Office Hours</h4>
-                  <div className="space-y-2 text-charcoal/70">
-                    <p>Monday - Friday: 9:00 AM - 6:00 PM IST</p>
-                    <p>Saturday: 10:00 AM - 4:00 PM IST</p>
-                    <p>Sunday: Closed</p>
-                  </div>
+                {/* Social Media Icons */}
+                <div className="flex space-x-4">
+                  <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
+                    <Facebook className="h-5 w-5 text-white" />
+                  </a>
+                  <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
+                    <Twitter className="h-5 w-5 text-white" />
+                  </a>
+                  <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
+                    <Instagram className="h-5 w-5 text-white" />
+                  </a>
+                  <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
+                    <MessageSquare className="h-5 w-5 text-white" />
+                  </a>
                 </div>
               </div>
 
               {/* Contact Form */}
-              <div className="bg-white rounded-2xl p-8 shadow-lg">
+              <div className="bg-white rounded-2xl p-10 shadow-lg w-full">
                 <form className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="firstName" className="block text-sm font-medium text-charcoal mb-2">
-                        First Name
-                      </label>
-                      <Input id="firstName" placeholder="John" className="border-mint/20 focus:border-mint-dark" />
-                    </div>
-                    <div>
-                      <label htmlFor="lastName" className="block text-sm font-medium text-charcoal mb-2">
-                        Last Name
-                      </label>
-                      <Input id="lastName" placeholder="Doe" className="border-mint/20 focus:border-mint-dark" />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-charcoal mb-2">
-                      Email
-                    </label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="john@example.com"
-                      className="border-mint/20 focus:border-mint-dark"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="subject" className="block text-sm font-medium text-charcoal mb-2">
-                      Subject
-                    </label>
-                    <Input
-                      id="subject"
-                      placeholder="How can we help you?"
-                      className="border-mint/20 focus:border-mint-dark"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="message" className="block text-sm font-medium text-charcoal mb-2">
-                      Message
-                    </label>
-                    <Textarea
-                      id="message"
-                      placeholder="Tell us more about your inquiry..."
-                      rows={4}
-                      className="border-mint/20 focus:border-mint-dark"
-                    />
-                  </div>
-                  <Button className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3">
-                    Send Message
+                  <Input
+                    type="text"
+                    placeholder="Name"
+                    className="w-full border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
+                  />
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    className="w-full border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
+                  />
+                  <Textarea
+                    placeholder="Message"
+                    className="w-full min-h-[150px] border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
+                  />
+                  <Button className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white">
+                    Send
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </form>
@@ -671,12 +553,15 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="container mx-auto px-6 py-8 border-t border-mint/10">
-        <div className="flex flex-col md:flex-row items-center justify-between">
-          <div className="flex items-center space-x-3 mb-4 md:mb-0">
-            <div className="w-8 h-8 bg-gradient-to-br from-mint-dark to-mint rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">SN</span>
-            </div>
-            <span className="text-2xl font-bold text-mint-dark">SereneNow</span>
+        <div className="flex flex-col md:flex-row items-center justify-between mb-8">
+          <div className="flex items-center">
+            <a href="#" className="flex items-center space-x-2">
+              <img src="/favicon.png" alt="SereneNow Logo" className="w-8 h-8" />
+              <span className="text-charcoal font-semibold">SereneNow</span>
+            </a>
+          </div>
+          <div className="text-center text-sm text-charcoal/60">
+          © 2025 SereneNow. All rights reserved.
           </div>
           <div className="flex items-center space-x-6 text-charcoal/70">
             <a href="#" className="hover:text-mint-dark transition-colors">

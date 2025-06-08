@@ -15,7 +15,7 @@ export function TypewriterEffect() {
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0)
   const [currentText, setCurrentText] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
-  const [typingSpeed, setTypingSpeed] = useState(80)
+  const [typingSpeed, setTypingSpeed] = useState(35)
 
   useEffect(() => {
     const currentPhrase = phrases[currentPhraseIndex]
@@ -24,22 +24,22 @@ export function TypewriterEffect() {
       // Typing
       if (!isDeleting && currentText !== currentPhrase) {
         setCurrentText(currentPhrase.substring(0, currentText.length + 1))
-        setTypingSpeed(80)
+        setTypingSpeed(35)
       }
       // Deleting
       else if (isDeleting && currentText !== "") {
         setCurrentText(currentPhrase.substring(0, currentText.length - 1))
-        setTypingSpeed(40)
+        setTypingSpeed(5)
       }
       // Pause at end of typing
       else if (!isDeleting && currentText === currentPhrase) {
-        setTimeout(() => setIsDeleting(true), 1500)
+        setTimeout(() => setIsDeleting(true), 1000)
       }
       // Move to next phrase
       else if (isDeleting && currentText === "") {
         setIsDeleting(false)
         setCurrentPhraseIndex((currentPhraseIndex + 1) % phrases.length)
-        setTypingSpeed(200)
+        setTypingSpeed(100)
       }
     }, typingSpeed)
 
