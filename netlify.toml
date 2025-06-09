@@ -1,8 +1,15 @@
 [build]
-  publish = "/"
-  command = ""
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [[redirects]]
   from = "/*"
-  to = "/index.html"
-  status = 200 
+  to = "/.netlify/functions/next"
+  status = 200
+
+[functions]
+  external_node_modules = ["@netlify/functions"]
+  included_files = [".next/server/**/*.json"]
