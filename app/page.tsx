@@ -19,15 +19,15 @@ import {
   Twitter,
   Users,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Input } from "@/components/ui/input"
+import { Button } from "../components/ui/button"
+import { Card, CardContent } from "../components/ui/card"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/collapsible"
+import { Input } from "../components/ui/input"
 import { default as NextImage } from "next/image"
-import { Textarea } from "@/components/ui/textarea"
-import { TypewriterEffect } from "@/components/typewriter-effect"
-import { MainNav } from "@/components/main-nav"
-import { ToolReplacement } from "@/components/tool-replacement"
+import { Textarea } from "../components/ui/textarea"
+import { TypewriterEffect } from "../components/typewriter-effect"
+import { MainNav } from "../components/main-nav"
+import { ToolReplacement } from "../components/tool-replacement"
 
 export default function LandingPage() {
   return (
