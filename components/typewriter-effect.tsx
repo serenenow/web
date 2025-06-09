@@ -5,11 +5,11 @@ import { cn } from "@/lib/utils"
 
 export function TypewriterEffect() {
   const phrases = [
-    "Organize my therapy notes...",
-    "Book sessions without back-and-forth...",
-    "Track client payments in one place...",
-    "Replace WhatsApp and Gmail chaos...",
-    "Feel confident running my practice...",
+    "Set my availability and let clients book easily...",
+    "Accept secure payments — online or offline...",
+    "Keep my bank details and WhatsApp number private...",
+    "Manage all my finances without spreadsheets or guesswork...",
+    "Get notified and send automatic reminders to clients...",
   ]
 
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0)

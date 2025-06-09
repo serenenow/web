@@ -1,3 +1,5 @@
+"use client"
+
 import {
   ArrowRight,
   Calendar,
@@ -21,9 +23,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
+import { default as NextImage } from "next/image"
 import { Textarea } from "@/components/ui/textarea"
 import { TypewriterEffect } from "@/components/typewriter-effect"
 import { MainNav } from "@/components/main-nav"
+import { ToolReplacement } from "@/components/tool-replacement"
 
 export default function LandingPage() {
   return (
@@ -37,24 +41,33 @@ export default function LandingPage() {
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-5xl lg:text-6xl font-bold text-charcoal leading-tight">
-                Therapy infrastructure to <span className="text-mint-dark">grow your practice</span>
+                Therapy infrastructure to <span className="text-mint-dark">simplify your practice</span>
               </h1>
-              <p className="text-xl text-charcoal/70 leading-relaxed">
+              {/* <p className="text-xl text-charcoal/70 leading-relaxed">
                 SereneNow replaces WhatsApp chats, scattered emails, calendar chaos, and messy notes — with one private,
                 organized platform.
-              </p>
+              </p> */}
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-mint-dark hover:bg-mint-dark/90 text-white px-8 py-4 text-lg">
-                Get Started Free
-                <ArrowRight className="ml-2 h-5 w-5" />
+              <Button
+                size="lg"
+                className="bg-mint-dark hover:bg-mint-dark/90 text-white px-8 py-4 text-lg"
+                asChild
+              >
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSc49XBBZDbeNVC7y_WdXhYjCxjaOwK66KOBH6Ty_4XrzWMYvQ/viewform?usp=dialog" target="_blank" rel="noopener noreferrer">
+                  Get Started Free
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </a>
               </Button>
               <Button
                 variant="outline"
                 size="lg"
                 className="border-mint-dark text-mint-dark hover:bg-mint-dark hover:text-white px-8 py-4 text-lg"
+                asChild
               >
-                Watch Demo
+                <a href="https://www.youtube.com/watch?v=K1A7mS9CFXQ" target="_blank" rel="noopener noreferrer">
+                  Watch Demo
+                </a>
               </Button>
             </div>
           </div>
@@ -104,83 +117,7 @@ export default function LandingPage() {
       </section>
 
       {/* Before vs After Comparison */}
-      <section className="container mx-auto px-6 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-charcoal mb-4">Everything in one place</h2>
-          <p className="text-xl text-charcoal/70">Stop juggling multiple apps and platforms</p>
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Before */}
-          <div className="space-y-6">
-            <h3 className="text-2xl font-semibold text-charcoal text-center">Before SereneNow</h3>
-            <div className="grid grid-cols-2 gap-6">
-              <Card className="p-6 border-red-200 bg-red-50">
-                <CardContent className="p-0 text-center space-y-3">
-                  <MessageSquare className="h-12 w-12 text-green-600 mx-auto" />
-                  <p className="font-medium text-charcoal">WhatsApp</p>
-                  <p className="text-sm text-charcoal/60">Scattered conversations</p>
-                </CardContent>
-              </Card>
-              <Card className="p-6 border-red-200 bg-red-50">
-                <CardContent className="p-0 text-center space-y-3">
-                  <Mail className="h-12 w-12 text-blue-600 mx-auto" />
-                  <p className="font-medium text-charcoal">Gmail</p>
-                  <p className="text-sm text-charcoal/60">Lost emails</p>
-                </CardContent>
-              </Card>
-              <Card className="p-6 border-red-200 bg-red-50">
-                <CardContent className="p-0 text-center space-y-3">
-                  <Calendar className="h-12 w-12 text-orange-600 mx-auto" />
-                  <p className="font-medium text-charcoal">Google Calendar</p>
-                  <p className="text-sm text-charcoal/60">Booking chaos</p>
-                </CardContent>
-              </Card>
-              <Card className="p-6 border-red-200 bg-red-50">
-                <CardContent className="p-0 text-center space-y-3">
-                  <FileText className="h-12 w-12 text-gray-600 mx-auto" />
-                  <p className="font-medium text-charcoal">Notes App</p>
-                  <p className="text-sm text-charcoal/60">Messy records</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* After */}
-          <div className="space-y-6">
-            <h3 className="text-2xl font-semibold text-charcoal text-center">With SereneNow</h3>
-            <Card className="p-8 border-mint/20 bg-gradient-to-br from-mint/10 to-coral/5">
-              <CardContent className="p-0 text-center space-y-6">
-                <div className="w-20 h-20 bg-mint-dark rounded-2xl flex items-center justify-center mx-auto">
-                  <Smartphone className="h-10 w-10 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-charcoal mb-2">SereneNow</p>
-                  <p className="text-charcoal/70">One unified platform for everything</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-mint-dark rounded-full"></div>
-                    <span className="text-charcoal">Secure messaging</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-coral rounded-full"></div>
-                    <span className="text-charcoal">Smart scheduling</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-mint-dark rounded-full"></div>
-                    <span className="text-charcoal">Payment processing</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-coral rounded-full"></div>
-                    <span className="text-charcoal">Client records</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
+      <ToolReplacement />
 
       {/* Feature Highlights */}
       <section id="features" className="container mx-auto px-6 py-20">
@@ -273,9 +210,14 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3">
-                Get Started Free
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button 
+                className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
+                asChild
+              >
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSc49XBBZDbeNVC7y_WdXhYjCxjaOwK66KOBH6Ty_4XrzWMYvQ/viewform?usp=dialog" target="_blank" rel="noopener noreferrer">
+                  Get Started Free
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
               </Button>
             </CardContent>
           </Card>
@@ -313,9 +255,14 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button className="w-full bg-coral hover:bg-coral/90 text-white py-3">
-                Upgrade to Pro
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button 
+                className="w-full bg-coral hover:bg-coral/90 text-white py-3"
+                asChild
+              >
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSc49XBBZDbeNVC7y_WdXhYjCxjaOwK66KOBH6Ty_4XrzWMYvQ/viewform?usp=dialog" target="_blank" rel="noopener noreferrer">
+                  Upgrade to Pro
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
               </Button>
             </CardContent>
           </Card>
@@ -349,8 +296,14 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button variant="outline" className="w-full border-coral text-coral hover:bg-coral hover:text-white py-3">
-                Contact Us
+              <Button 
+                variant="outline" 
+                className="w-full border-coral text-coral hover:bg-coral hover:text-white py-3"
+                asChild
+              >
+                <a href="#contact">
+                  Contact Us
+                </a>
               </Button>
             </CardContent>
           </Card>
@@ -361,7 +314,7 @@ export default function LandingPage() {
       <section id="story" className="container mx-auto px-6 py-20 bg-gradient-to-br from-mint/20 to-mint-light/30">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-charcoal mb-4">Why We Built SereneNow</h2>
+            <h2 className="text-4xl font-bold text-charcoal mb-4">From a Therapist Who’s Been There</h2>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -369,10 +322,12 @@ export default function LandingPage() {
             <div className="flex justify-center lg:justify-start">
               <div className="relative">
                 <div className="w-80 h-80 rounded-full overflow-hidden shadow-2xl border-4 border-white">
-                  <img
-                    src="/placeholder.svg?height=350&width=350"
+                  <NextImage
+                    src="/about.jpeg"
                     alt="Co-founder portrait"
-                    className="w-full h-full object-cover"
+                    width={350}
+                    height={350}
+                    className="w-full h-full object-cover object-[50%_35%]"
                   />
                 </div>
               </div>
