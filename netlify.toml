@@ -4,3 +4,9 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+  from = "/delete-your-data.html"
+  to = "/delete-your-data"
+  status = 301
+  force = true

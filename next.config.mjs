@@ -11,6 +11,15 @@ const nextConfig = {
     unoptimized: true,
   },
   distDir: 'out',
+  async redirects() {
+    return [
+      {
+        source: '/delete-your-data.html',
+        destination: '/delete-your-data',
+        permanent: true,
+      },
+    ];
+  },
 }
 
 export default nextConfig
