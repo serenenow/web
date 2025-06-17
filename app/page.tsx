@@ -519,10 +519,10 @@ export default function LandingPage() {
           © 2025 SereneNow. All rights reserved.
           </div>
           <div className="flex items-center space-x-6 text-charcoal/70">
-            <a href="#" className="hover:text-mint-dark transition-colors">
+            <a href="/terms-of-service" className="hover:text-mint-dark transition-colors">
               Terms of Service
             </a>
-            <a href="#" className="hover:text-mint-dark transition-colors">
+            <a href="/privacy-policy" className="hover:text-mint-dark transition-colors">
               Privacy Policy
             </a>
           </div>
