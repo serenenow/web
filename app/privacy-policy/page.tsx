@@ -150,7 +150,7 @@ export default function PrivacyPolicy() {
               </div>
             </div>
 
-            <p className="text-gray-600 italic mt-8">Last updated: April 5, 2024</p>
+            <p className="text-gray-600 italic mt-8">Last updated: June 16, 2025</p>
           </div>
         </div>
       </main>

@@ -302,7 +302,7 @@ export default function TermsOfService() {
 
             <p className="mt-8">By using SereneNow, you agree to these Terms of Service. Thanks for being part of our mission to make therapy more accessible and seamless!</p>
 
-            <p className="text-gray-600 italic mt-8">Last updated: April 3, 2025</p>
+            <p className="text-gray-600 italic mt-8">Last updated: June 16, 2025</p>
           </div>
         </div>
       </main>
