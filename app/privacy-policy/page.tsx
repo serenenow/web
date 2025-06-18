@@ -118,14 +118,17 @@ export default function PrivacyPolicy() {
             </div>
 
             <h2 className="text-2xl font-semibold mt-8 mb-4">5. CHANGES TO THIS PRIVACY POLICY</h2>
-            <p>We may update this Privacy Policy from time to time. If we make any material changes in the way we handle your personal information or in the policy itself, we will notify you either through a notice on the mobile app or via email. You will be able to review the updated terms before continuing to use SereneNow.</p>
-            <p className="mt-4">If you disagree with the updated terms and no longer wish to use the Services, you may request account deactivation by contacting <strong>admin@serenenow.com</strong>.</p>
-            <p className="mt-4">Continued use of SereneNow after such notice constitutes your acceptance of the revised Privacy Policy.</p>
-
-            <h2 className="text-2xl font-semibold mt-8 mb-4">6. CHILDREN'S AND MINORS' PRIVACY</h2>
+            <p className="mb-4">
+                We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date at the top of this Privacy Policy. You are advised to review this Privacy Policy periodically for any changes.
+            </p>
+            <h2 className="text-2xl font-semibold mt-8 mb-4">6. INTERNATIONAL USE</h2>
+            <p className="mb-4">
+                SereneNow is designed primarily for mental health professionals licensed in India. However, our Services may also be used by practitioners operating from abroad or clients accessing services from outside India. SereneNow does not verify compliance with licensing, telehealth regulations, or cross-border professional rules. If you are accessing or providing services across borders, you do so at your own risk and are responsible for ensuring compliance with any local laws, including licensing, telehealth, and data transfer regulations. SereneNow serves solely as a platform for administrative functions—such as booking, payments, and communication—and does not assume responsibility for professional compliance.
+            </p>
+            <h2 className="text-2xl font-semibold mt-8 mb-4">7. CHILDREN'S AND MINORS' PRIVACY</h2>
             <p>SereneNow is not intended for use by individuals under the age of 18. We do not knowingly collect personal data from minors. If you are under 18, please do not use the Services.</p>
 
-            <h2 className="text-2xl font-semibold mt-8 mb-4">7. CONSENT TO THIS POLICY</h2>
+            <h2 className="text-2xl font-semibold mt-8 mb-4">8. CONSENT TO THIS POLICY</h2>
             <p>By creating an account or using SereneNow, you acknowledge that you have read and agree to this Privacy Policy. You consent to the collection, use, processing, and disclosure of your Personal Information in accordance with this policy.</p>
             <p className="mt-4">Use of the Services is also subject to our Terms of Use.</p>
 

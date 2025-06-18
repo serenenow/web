@@ -193,7 +193,10 @@ export default function TermsOfService() {
               <li>You will comply with all applicable ethical, professional, and legal obligations when interacting with clients through SereneNow.</li>
             </ul>
 
-            <h3 className="text-xl font-semibold mt-6 mb-3">4.6 USAGE IN MARKETING MATERIALS</h3>
+            <h3 className="text-xl font-semibold mt-6 mb-3">4.6 CROSS-BORDER USE AND PROFESSIONAL VERIFICATION</h3>
+            <p>SereneNow is intended for use by mental health professionals who are legally authorized in their practicing jurisdiction—primarily India. Some Practitioners may reside or be licensed outside India, and similarly, End‑Users may access services from outside India. SereneNow does not verify, and is not responsible for, the legality of providing or receiving services across borders, the correctness of professional credentials in foreign jurisdictions, or cross‑border regulatory compliance. You agree to verify and ensure compliance with all applicable legal, licensing, and ethical requirements in your respective locations. SereneNow is only a technology facilitator and does not practice or prescribe healthcare.</p>
+
+            <h3 className="text-xl font-semibold mt-6 mb-3">4.7 USAGE IN MARKETING MATERIALS</h3>
 
             <p>With your permission, SereneNow may reference you in promotional content such as testimonials, case studies, or educational materials. We will seek prior consent for any specific use involving your name, photo, logo, or branding.</p>
 
