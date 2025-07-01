@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'SereneNow - Mental Health Care Platform',
@@ -9,18 +12,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.png" />
-      </head>
-      <body className="min-h-screen bg-gray-50">
-        <div className="flex min-h-screen flex-col">
-          <main className="flex-1">{children}</main>
-        </div>
+    <html lang="en" suppressHydrationWarning>
+      <head />
+      <body className={`${inter.className} min-h-screen bg-gray-50`}>
+        {children}
       </body>
     </html>
   )
