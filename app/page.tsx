@@ -210,7 +210,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button 
+              <Button
                 className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
                 asChild
               >
@@ -255,7 +255,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button 
+              <Button
                 className="w-full bg-coral hover:bg-coral/90 text-white py-3"
                 asChild
               >
@@ -296,8 +296,8 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full border-coral text-coral hover:bg-coral hover:text-white py-3"
                 asChild
               >
