@@ -1,17 +1,15 @@
-import { BookingForm } from './booking-form'
+import { BookingForm } from "./booking-form"
 
-type PageProps = {
-  params: { therapist: string; service: string }
+interface PageProps {
+  params: Promise<{ therapist: string; service: string }>
 }
 
-export default function Page({
-  params,
-}: {
-  params: { therapist: string; service: string }
-}) {
+export default async function Page({ params }: PageProps) {
+  const { therapist, service } = await params
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <BookingForm therapistId={params.therapist} serviceId={params.service} />
+      <BookingForm therapistId={therapist} serviceId={service} />
     </div>
   )
 }
