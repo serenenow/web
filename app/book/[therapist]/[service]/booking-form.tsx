@@ -1,77 +1,105 @@
 "use client"
 
-import { useState } from "react"
-import { Calendar, Clock, MapPin, Shield, ArrowLeft, Check } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Calendar, Clock, MapPin, ArrowLeft, Check, Globe, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
+import { useSearchParams } from "next/navigation"
+import { useBooking } from "@/hooks/use-booking"
 
 interface BookingFormProps {
-  therapistId: string;
-  serviceId: string;
+  therapistId: string
+  serviceId: string
 }
 
 export function BookingForm({ therapistId, serviceId }: BookingFormProps) {
+  const searchParams = useSearchParams()
+  const clientCode = searchParams.get("code")
+  const { fetchAvailableSlots, bookSession, processPayment, loading, error } = useBooking()
+
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(false)
+  const [paymentMode, setPaymentMode] = useState<"online" | "direct">("online")
   const [isBooked, setIsBooked] = useState(false)
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  })
+  const [availableSlots, setAvailableSlots] = useState<any>(null)
+  const [bookingData, setBookingData] = useState<any>(null)
 
-  // Mock data - would come from API
-  const therapist = {
-    name: "Dr. Priya Sharma",
-    title: "Licensed Clinical Psychologist",
-    photo: "/placeholder.svg?height=120&width=120",
+  // Load booking data from sessionStorage
+  useEffect(() => {
+    const storedData = sessionStorage.getItem("bookingData")
+    if (storedData) {
+      setBookingData(JSON.parse(storedData))
+    }
+  }, [])
+
+  // Fetch available slots when component mounts
+  useEffect(() => {
+    const loadSlots = async () => {
+      try {
+        const slots = await fetchAvailableSlots(therapistId, serviceId)
+        setAvailableSlots(slots)
+      } catch (err) {
+        console.error("Failed to load slots:", err)
+      }
+    }
+
+    loadSlots()
+  }, [therapistId, serviceId, fetchAvailableSlots])
+
+  // Fetch time slots when date is selected
+  useEffect(() => {
+    if (selectedDate) {
+      const loadTimeSlots = async () => {
+        try {
+          const slots = await fetchAvailableSlots(therapistId, serviceId, selectedDate)
+          setAvailableSlots((prev) => ({ ...prev, timeSlots: slots.timeSlots }))
+        } catch (err) {
+          console.error("Failed to load time slots:", err)
+        }
+      }
+
+      loadTimeSlots()
+    }
+  }, [selectedDate, therapistId, serviceId, fetchAvailableSlots])
+
+  const handleBooking = async () => {
+    if (!bookingData || !selectedDate || !selectedTime || !clientCode) return
+
+    try {
+      const booking = await bookSession({
+        clientCode,
+        therapistId,
+        serviceId,
+        date: selectedDate,
+        time: selectedTime,
+        paymentMode,
+      })
+
+      if (paymentMode === "online" && booking.status === "pending_payment") {
+        // Process payment
+        await processPayment(booking.bookingId)
+      }
+
+      setIsBooked(true)
+    } catch (err) {
+      console.error("Booking failed:", err)
+    }
   }
 
-  const service = {
-    name: "Individual Therapy Session",
-    description: "A confidential 50-minute one-on-one therapy session focused on your mental health and wellbeing.",
-    location: "Google Meet",
-    fee: "₹1,500",
-    duration: "50 minutes",
+  if (!bookingData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-charcoal/70">Loading booking information...</p>
+        </div>
+      </div>
+    )
   }
 
-  // Mock available dates and times
-  const availableDates = [
-    { date: "2024-01-15", day: "Mon", dayNum: "15" },
-    { date: "2024-01-16", day: "Tue", dayNum: "16" },
-    { date: "2024-01-17", day: "Wed", dayNum: "17" },
-    { date: "2024-01-18", day: "Thu", dayNum: "18" },
-    { date: "2024-01-19", day: "Fri", dayNum: "19" },
-    { date: "2024-01-22", day: "Mon", dayNum: "22" },
-    { date: "2024-01-23", day: "Tue", dayNum: "23" },
-  ]
-
-  const timeSlots = ["9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"]
-
-  const handleDateSelect = (date: string) => {
-    setSelectedDate(date)
-    setSelectedTime(null)
-    setShowForm(false)
-  }
-
-  const handleTimeSelect = (time: string) => {
-    setSelectedTime(time)
-    setShowForm(true)
-  }
-
-  const handleBooking = (paymentType: "online" | "later") => {
-    // Mock booking logic
-    setIsBooked(true)
-  }
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+  const { client, therapist, service } = bookingData
+  const platformFee = Math.round(service.fee * 0.03)
+  const taxes = Math.round(service.fee * 0.18)
+  const total = service.fee + platformFee + taxes
 
   if (isBooked) {
     return (
@@ -97,12 +125,9 @@ export function BookingForm({ therapistId, serviceId }: BookingFormProps) {
                   </p>
                   <p className="text-charcoal/80">{service.location}</p>
                 </div>
-                <p className="text-sm text-charcoal/60">
-                  A calendar invite with Google Meet link will be sent to your email.
-                </p>
                 <Button
                   variant="outline"
-                  className="mt-6 border-mint-dark text-mint-dark hover:bg-mint-dark hover:text-white"
+                  className="mt-6 border-mint-dark text-mint-dark hover:bg-mint-dark hover:text-white bg-transparent"
                   onClick={() => window.history.back()}
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
@@ -129,86 +154,143 @@ export function BookingForm({ therapistId, serviceId }: BookingFormProps) {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <div className="text-center lg:text-left">
-            <h1 className="text-2xl font-bold text-charcoal">Book a Session</h1>
-            <p className="text-charcoal/70">Select a time that works for you</p>
-          </div>
         </div>
 
-        {/* Main Content */}
-        <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Left Column - Therapist & Service Info */}
-          <div className="space-y-6">
+        <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          {/* Left Sidebar - Client & Booking Info */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Client Information */}
+            <Card className="border-mint/20 shadow-sm bg-mint/5">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-charcoal mb-4">Client Information</h3>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="font-medium">Name:</span> {client.name}
+                  </p>
+                  <p>
+                    <span className="font-medium">Email:</span> {client.email}
+                  </p>
+                  <p>
+                    <span className="font-medium">Code:</span> {clientCode}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Therapist & Service */}
             <Card className="border-mint/20 shadow-sm">
               <CardContent className="p-6">
-                {/* Therapist Info */}
-                <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+                <h3 className="text-lg font-semibold text-charcoal mb-4">Therapist & Service</h3>
+
+                <div className="flex items-center space-x-3 mb-4">
                   <img
-                    src={therapist.photo || "/placeholder.svg"}
+                    src={therapist.photo || "/placeholder.svg?height=60&width=60"}
                     alt={therapist.name}
-                    className="w-20 h-20 rounded-full object-cover border-2 border-mint/20"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-mint/20"
                   />
-                  <div className="text-center sm:text-left">
-                    <h2 className="text-xl font-bold text-charcoal">{therapist.name}</h2>
-                    <p className="text-charcoal/70">{therapist.title}</p>
+                  <div>
+                    <h4 className="font-semibold text-charcoal">{therapist.name}</h4>
+                    <p className="text-sm text-charcoal/70">{therapist.title}</p>
                   </div>
                 </div>
 
-                {/* Service Details */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-charcoal mb-2">{service.name}</h3>
-                    <p className="text-charcoal/70 text-sm leading-relaxed">{service.description}</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-mint-dark" />
-                      <span className="text-sm text-charcoal">{service.location}</span>
+                <div className="space-y-3">
+                  <h5 className="font-medium text-charcoal">{service.name}</h5>
+                  <div className="flex items-center space-x-4 text-sm text-charcoal/70">
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-4 w-4" />
+                      <span>{service.duration} minutes</span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-mint-dark" />
-                      <span className="text-sm text-charcoal">{service.duration}</span>
+                    <div className="flex items-center space-x-1">
+                      <MapPin className="h-4 w-4" />
+                      <span>{service.location}</span>
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-mint/10">
-                    <div className="text-2xl font-bold text-charcoal">{service.fee}</div>
-                    <Badge className="bg-mint/10 text-mint-dark hover:bg-mint/20">
-                      <Shield className="h-3 w-3 mr-1" />
-                      Confidential Session
-                    </Badge>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Booking Summary */}
+            {selectedDate && selectedTime && (
+              <Card className="border-mint/20 shadow-sm">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-charcoal mb-4">Booking Summary</h3>
+
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="font-medium text-charcoal">{therapist.name}</p>
+                      <p className="text-charcoal/70">{service.name}</p>
+                      <p className="text-charcoal/70">{service.duration} minutes</p>
+                    </div>
+
+                    <div>
+                      <p className="font-medium text-charcoal">Date & Time</p>
+                      <p className="text-charcoal/70">
+                        {selectedDate} at {selectedTime}
+                      </p>
+                      <p className="text-charcoal/70">India (IST)</p>
+                    </div>
+
+                    <div>
+                      <p className="font-medium text-charcoal">Payment Mode</p>
+                      <p className="text-charcoal/70">
+                        {paymentMode === "online" ? "Pay Online" : "Pay Directly to Therapist"}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* Right Column - Booking Flow */}
-          <div className="space-y-6">
+          {/* Right Content - Date/Time Selection */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Timezone */}
+            <Card className="border-mint/20 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Globe className="h-5 w-5 text-mint-dark" />
+                    <span className="font-medium text-charcoal">Timezone</span>
+                  </div>
+                  <select className="border border-mint/20 rounded-md px-3 py-2 bg-white">
+                    <option>India (IST)</option>
+                  </select>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Date Selection */}
             <Card className="border-mint/20 shadow-sm">
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold text-charcoal mb-4 flex items-center">
-                  <Calendar className="h-5 w-5 mr-2 text-mint-dark" />
-                  Select a Date
-                </h3>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                  {availableDates.map((dateObj) => (
-                    <button
-                      key={dateObj.date}
-                      onClick={() => handleDateSelect(dateObj.date)}
-                      className={`p-3 rounded-lg border text-center transition-colors ${
-                        selectedDate === dateObj.date
-                          ? "border-mint-dark bg-mint-dark text-white"
-                          : "border-gray-200 hover:border-mint-dark hover:bg-mint/5"
-                      }`}
-                    >
-                      <div className="text-xs text-gray-500">{dateObj.day}</div>
-                      <div className="font-semibold">{dateObj.dayNum}</div>
-                    </button>
-                  ))}
+                <div className="flex items-center space-x-2 mb-4">
+                  <Calendar className="h-5 w-5 text-mint-dark" />
+                  <h3 className="text-lg font-semibold text-charcoal">Select a Date</h3>
                 </div>
+
+                {loading && <p className="text-charcoal/70">Loading available dates...</p>}
+
+                {availableSlots?.dates && (
+                  <div className="grid grid-cols-4 gap-3">
+                    {availableSlots.dates.map((dateObj: any) => (
+                      <button
+                        key={dateObj.date}
+                        onClick={() => setSelectedDate(dateObj.date)}
+                        disabled={!dateObj.available}
+                        className={`p-4 rounded-lg border text-center transition-colors ${
+                          selectedDate === dateObj.date
+                            ? "border-mint-dark bg-mint-dark text-white"
+                            : dateObj.available
+                              ? "border-gray-200 hover:border-mint-dark hover:bg-mint/5"
+                              : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        <div className="text-sm text-gray-500 mb-1">{dateObj.day}</div>
+                        <div className="text-xl font-semibold">{dateObj.dayNum}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -216,104 +298,130 @@ export function BookingForm({ therapistId, serviceId }: BookingFormProps) {
             {selectedDate && (
               <Card className="border-mint/20 shadow-sm">
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-charcoal mb-4 flex items-center">
-                    <Clock className="h-5 w-5 mr-2 text-mint-dark" />
-                    Select a Time
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {timeSlots.map((time) => (
-                      <button
-                        key={time}
-                        onClick={() => handleTimeSelect(time)}
-                        className={`p-3 rounded-lg border text-center transition-colors ${
-                          selectedTime === time
-                            ? "border-mint-dark bg-mint-dark text-white"
-                            : "border-gray-200 hover:border-mint-dark hover:bg-mint/5"
-                        }`}
-                      >
-                        {time}
-                      </button>
-                    ))}
+                  <div className="flex items-center space-x-2 mb-4">
+                    <Clock className="h-5 w-5 text-mint-dark" />
+                    <h3 className="text-lg font-semibold text-charcoal">Available Times (India (IST))</h3>
+                  </div>
+
+                  {loading && <p className="text-charcoal/70">Loading available times...</p>}
+
+                  {availableSlots?.timeSlots && (
+                    <div className="grid grid-cols-3 gap-3">
+                      {availableSlots.timeSlots.map((timeSlot: any) => (
+                        <button
+                          key={timeSlot.time}
+                          onClick={() => setSelectedTime(timeSlot.time)}
+                          disabled={!timeSlot.available}
+                          className={`p-4 rounded-lg border text-center transition-colors ${
+                            selectedTime === timeSlot.time
+                              ? "border-mint-dark bg-mint-dark text-white"
+                              : timeSlot.available
+                                ? "border-gray-200 hover:border-mint-dark hover:bg-mint/5"
+                                : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
+                          }`}
+                        >
+                          {timeSlot.time}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Payment Mode */}
+            {selectedTime && (
+              <Card className="border-mint/20 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <CreditCard className="h-5 w-5 text-mint-dark" />
+                    <h3 className="text-lg font-semibold text-charcoal">Payment Mode</h3>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setPaymentMode("online")}
+                      className={`w-full p-4 rounded-lg border text-left transition-colors ${
+                        paymentMode === "online"
+                          ? "border-mint-dark bg-mint/5"
+                          : "border-gray-200 hover:border-mint-dark"
+                      }`}
+                    >
+                      <div className="font-medium text-charcoal">Pay Online</div>
+                      <div className="text-sm text-charcoal/70">Secure payment via Razorpay</div>
+                    </button>
+
+                    <button
+                      onClick={() => setPaymentMode("direct")}
+                      className={`w-full p-4 rounded-lg border text-left transition-colors ${
+                        paymentMode === "direct"
+                          ? "border-mint-dark bg-mint/5"
+                          : "border-gray-200 hover:border-mint-dark"
+                      }`}
+                    >
+                      <div className="font-medium text-charcoal">Pay Directly to Therapist</div>
+                      <div className="text-sm text-charcoal/70">Pay during or after the session</div>
+                    </button>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Booking Form */}
-            {showForm && (
+            {/* Price Breakdown & Payment */}
+            {selectedTime && paymentMode === "online" && (
               <Card className="border-mint/20 shadow-sm">
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-charcoal mb-4">Your Details</h3>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-charcoal mb-2">
-                          Name <span className="text-coral">*</span>
-                        </label>
-                        <Input
-                          placeholder="Your full name"
-                          value={formData.name}
-                          onChange={(e) => handleInputChange("name", e.target.value)}
-                          className="border-mint/20 focus:border-mint-dark"
-                        />
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span>Base Price</span>
+                        <span>₹{service.fee}</span>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-charcoal mb-2">
-                          Email <span className="text-coral">*</span>
-                        </label>
-                        <Input
-                          type="email"
-                          placeholder="your@email.com"
-                          value={formData.email}
-                          onChange={(e) => handleInputChange("email", e.target.value)}
-                          className="border-mint/20 focus:border-mint-dark"
-                        />
+                      <div className="flex justify-between text-charcoal/70">
+                        <span>Platform Fee (3%)</span>
+                        <span>₹{platformFee}</span>
+                      </div>
+                      <div className="flex justify-between text-charcoal/70">
+                        <span>Taxes (18%)</span>
+                        <span>₹{taxes}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-lg pt-3 border-t border-mint/20">
+                        <span>Total</span>
+                        <span>₹{total}</span>
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal mb-2">Phone (Optional)</label>
-                      <Input
-                        placeholder="+91 98765 43210"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange("phone", e.target.value)}
-                        className="border-mint/20 focus:border-mint-dark"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal mb-2">Message (Optional)</label>
-                      <Textarea
-                        placeholder="Anything you'd like to share before the session..."
-                        rows={3}
-                        value={formData.message}
-                        onChange={(e) => handleInputChange("message", e.target.value)}
-                        className="border-mint/20 focus:border-mint-dark"
-                      />
-                    </div>
-                  </div>
 
-                  {/* Payment Options */}
-                  <div className="mt-6 pt-6 border-t border-mint/10">
-                    <div className="space-y-3">
-                      <Button
-                        onClick={() => handleBooking("online")}
-                        className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
-                        disabled={!formData.name || !formData.email}
-                      >
-                        Pay Online - {service.fee}
-                      </Button>
-                      <Button
-                        onClick={() => handleBooking("later")}
-                        variant="outline"
-                        className="w-full border-mint-dark text-mint-dark hover:bg-mint-dark hover:text-white py-3"
-                        disabled={!formData.name || !formData.email}
-                      >
-                        Book Without Payment
-                      </Button>
-                    </div>
-                    <p className="text-xs text-charcoal/60 mt-3 text-center">
-                      By booking, you agree to our terms of service and privacy policy.
-                    </p>
+                    <Button
+                      onClick={handleBooking}
+                      disabled={loading}
+                      className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
+                    >
+                      {loading ? "Processing..." : `Pay ₹${total} & Book`}
+                    </Button>
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {selectedTime && paymentMode === "direct" && (
+              <Card className="border-mint/20 shadow-sm">
+                <CardContent className="p-6">
+                  <Button
+                    onClick={handleBooking}
+                    disabled={loading}
+                    className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
+                  >
+                    {loading ? "Processing..." : "Book Session"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <Card className="border-red-200 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">{error}</div>
                 </CardContent>
               </Card>
             )}

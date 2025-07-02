@@ -1,66 +1,115 @@
-export default function HomePage() {
+"use client"
+
+import {
+  ArrowRight,
+  Calendar,
+  Check,
+  ChevronDown,
+  CreditCard,
+  Facebook,
+  FileText,
+  Instagram,
+  Lock,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Phone,
+  Smartphone,
+  Star,
+  Twitter,
+  Users,
+} from "lucide-react"
+import { Button } from "../components/ui/button"
+import { Card, CardContent } from "../components/ui/card"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/collapsible"
+import { Input } from "../components/ui/input"
+import { default as NextImage } from "next/image"
+import { Textarea } from "../components/ui/textarea"
+import { TypewriterEffect } from "../components/typewriter-effect"
+import { MainNav } from "../components/main-nav"
+import { ToolReplacement } from "../components/tool-replacement"
+
+export default function LandingPage() {
   return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">Welcome to SereneNow</h1>
-      <p className="text-lg mb-4">
-        Visit our booking page at: <a href="/book/dr-priya-sharma/individual-therapy" className="text-blue-600 hover:underline">/book/dr-priya-sharma/individual-therapy</a>
-      </p>
-    </main>
-  )
-}
-            >
-              <a href="https://docs.google.com/forms/d/e/1FAIpQLSc49XBBZDbeNVC7y_WdXhYjCxjaOwK66KOBH6Ty_4XrzWMYvQ/viewform?usp=dialog" target="_blank" rel="noopener noreferrer">
-                Upgrade to Pro
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light">
+      {/* Navigation */}
+      <MainNav />
 
-        {/* Enterprise Plan */}
-        <Card className="p-8 border-2 border-coral/20 bg-gradient-to-br from-coral/5 to-white">
-          <CardContent className="p-0 space-y-6">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-charcoal mb-2">Enterprise / Organization</h3>
-              <div className="flex items-baseline justify-center">
-                <span className="text-2xl font-bold text-coral">Custom pricing</span>
-              </div>
-            </div>
-
+      {/* Hero Section */}
+      <section className="container mx-auto px-6 py-20">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-8">
             <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <Check className="h-5 w-5 text-coral mt-0.5 flex-shrink-0" />
-                <span className="text-charcoal">Multi-therapist team support</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <Check className="h-5 w-5 text-coral mt-0.5 flex-shrink-0" />
-                <span className="text-charcoal">Advanced insights & reporting</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <Check className="h-5 w-5 text-coral mt-0.5 flex-shrink-0" />
-                <span className="text-charcoal">Dedicated account manager</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <Check className="h-5 w-5 text-coral mt-0.5 flex-shrink-0" />
-                <span className="text-charcoal">Custom onboarding</span>
+              <h1 className="text-5xl lg:text-6xl font-bold text-charcoal leading-tight">
+                Therapy infrastructure to <span className="text-mint-dark">simplify your practice</span>
+              </h1>
+              {/* <p className="text-xl text-charcoal/70 leading-relaxed">
+                SereneNow replaces WhatsApp chats, scattered emails, calendar chaos, and messy notes — with one private,
+                organized platform.
+              </p> */}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                size="lg"
+                className="bg-mint-dark hover:bg-mint-dark/90 text-white px-8 py-4 text-lg"
+                asChild
+              >
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSc49XBBZDbeNVC7y_WdXhYjCxjaOwK66KOBH6Ty_4XrzWMYvQ/viewform?usp=dialog" target="_blank" rel="noopener noreferrer">
+                  Get Started Free
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </a>
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-mint-dark text-mint-dark hover:bg-mint-dark hover:text-white px-8 py-4 text-lg"
+                asChild
+              >
+                <a href="https://www.youtube.com/watch?v=K1A7mS9CFXQ" target="_blank" rel="noopener noreferrer">
+                  Watch Demo
+                </a>
+              </Button>
+            </div>
+          </div>
+          <div className="relative">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 border border-mint/10">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal">SereneNow Dashboard</h3>
+                  <div className="flex space-x-2">
+                    <div className="w-3 h-3 bg-coral rounded-full"></div>
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-mint/10 p-4 rounded-lg">
+                    <Users className="h-6 w-6 text-mint-dark mb-2" />
+                    <p className="text-sm font-medium text-charcoal">24 Active Clients</p>
+                  </div>
+                  <div className="bg-coral/5 p-4 rounded-lg">
+                    <Calendar className="h-6 w-6 text-coral mb-2" />
+                    <p className="text-sm font-medium text-charcoal">8 Appointments Today</p>
+                  </div>
+                  <div className="bg-mint/10 p-4 rounded-lg">
+                    <CreditCard className="h-6 w-6 text-mint-dark mb-2" />
+                    <p className="text-sm font-medium text-charcoal">$2,400 This Month</p>
+                  </div>
+                  <div className="bg-coral/5 p-4 rounded-lg">
+                    <Lock className="h-6 w-6 text-coral mb-2" />
+                    <p className="text-sm font-medium text-charcoal">100% Secure</p>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
 
-            <Button 
-              variant="outline" 
-              className="w-full border-coral text-coral hover:bg-coral hover:text-white py-3"
-              asChild
-            >
-              <a href="#contact">
-                Contact Us
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
-  )
-}
+      {/* Typing Animation Section */}
+      <section className="container mx-auto px-6 py-16 bg-gradient-to-r from-mint/20 via-white to-mint/20 rounded-3xl">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-charcoal mb-8">What can I do with SereneNow?</h2>
           <div className="h-24 text-xl md:text-2xl">
             <TypewriterEffect />
           </div>
@@ -161,7 +210,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <Button 
+              <Button
                 className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
                 asChild
               >
@@ -206,7 +255,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <Button 
+              <Button
                 className="w-full bg-coral hover:bg-coral/90 text-white py-3"
                 asChild
               >
@@ -247,8 +296,8 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full border-coral text-coral hover:bg-coral hover:text-white py-3"
                 asChild
               >
