@@ -12,6 +12,20 @@ interface BookingFormProps {
   serviceId: string
 }
 
+interface AvailableSlots {
+  dates?: Array<{
+    date: string
+    day: string
+    dayNum: string
+    available: boolean
+  }>
+  timeSlots?: Array<{
+    time: string
+    available: boolean
+    timezone: string
+  }>
+}
+
 export function BookingForm({ therapistId, serviceId }: BookingFormProps) {
   const searchParams = useSearchParams()
   const clientCode = searchParams.get("code")
@@ -21,7 +35,7 @@ export function BookingForm({ therapistId, serviceId }: BookingFormProps) {
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [paymentMode, setPaymentMode] = useState<"online" | "direct">("online")
   const [isBooked, setIsBooked] = useState(false)
-  const [availableSlots, setAvailableSlots] = useState<any>(null)
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlots | null>(null)
   const [bookingData, setBookingData] = useState<any>(null)
 
   // Load booking data from sessionStorage
@@ -52,7 +66,10 @@ export function BookingForm({ therapistId, serviceId }: BookingFormProps) {
       const loadTimeSlots = async () => {
         try {
           const slots = await fetchAvailableSlots(therapistId, serviceId, selectedDate)
-          setAvailableSlots((prev) => ({ ...prev, timeSlots: slots.timeSlots }))
+          setAvailableSlots((prev: AvailableSlots | null) => ({
+            ...prev,
+            timeSlots: slots.timeSlots,
+          }))
         } catch (err) {
           console.error("Failed to load time slots:", err)
         }
@@ -272,7 +289,7 @@ export function BookingForm({ therapistId, serviceId }: BookingFormProps) {
 
                 {availableSlots?.dates && (
                   <div className="grid grid-cols-4 gap-3">
-                    {availableSlots.dates.map((dateObj: any) => (
+                    {availableSlots.dates.map((dateObj) => (
                       <button
                         key={dateObj.date}
                         onClick={() => setSelectedDate(dateObj.date)}
@@ -307,7 +324,7 @@ export function BookingForm({ therapistId, serviceId }: BookingFormProps) {
 
                   {availableSlots?.timeSlots && (
                     <div className="grid grid-cols-3 gap-3">
-                      {availableSlots.timeSlots.map((timeSlot: any) => (
+                      {availableSlots.timeSlots.map((timeSlot) => (
                         <button
                           key={timeSlot.time}
                           onClick={() => setSelectedTime(timeSlot.time)}
