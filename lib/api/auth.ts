@@ -1,75 +1,83 @@
 // Authentication related API calls
 import { apiRequest } from "./base"
 
-interface LoginResponse {
-  success: boolean
-  message: string
+interface EmailValidateRequest {
+  email: string
 }
 
-interface VerifyCodeResponse {
-  success: boolean
-  isNewUser: boolean
-  token: string
-  user?: {
-    id: string
-    email: string
-    firstName?: string
-    lastName?: string
-  }
+interface EmailVerifyRequest {
+  email: string
+  code: string
 }
 
-export async function sendVerificationCode(email: string): Promise<LoginResponse> {
-  return apiRequest<LoginResponse>("/auth/send-code", {
+interface ExpertDto {
+  id: string
+  email: string
+  name: string
+  qualification: string
+  pictureUrl: string
+  authSource: string
+  activationStatus: string
+  timeZone: string
+  firebaseTokenId?: string
+}
+
+interface ExpertResponse {
+  accessToken: string
+  hasSetupProfile: boolean
+  expert: ExpertDto
+}
+
+export async function sendVerificationCode(email: string): Promise<void> {
+  const requestData: EmailValidateRequest = { email }
+
+  await apiRequest<void>("/email/auth/validate", {
     method: "POST",
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(requestData),
   })
 }
 
-export async function verifyCode(email: string, code: string): Promise<VerifyCodeResponse> {
-  try {
-    const data = await apiRequest<VerifyCodeResponse>("/auth/verify-code", {
-      method: "POST",
-      body: JSON.stringify({ email, code }),
-    })
+export async function verifyCode(email: string, code: string): Promise<ExpertResponse> {
+  const requestData: EmailVerifyRequest = { email, code }
 
-    // Store token if login successful
-    if (data.success && data.token) {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("auth_token", data.token)
-      }
-    }
-
-    return data
-  } catch (error) {
-    console.error("Verify code error:", error)
-    throw error
-  }
+  return await apiRequest<ExpertResponse>("/web/auth/expert/verify", {
+    method: "POST",
+    body: JSON.stringify(requestData),
+  })
 }
 
-export async function resendVerificationCode(email: string): Promise<LoginResponse> {
-  return apiRequest<LoginResponse>("/auth/resend-code", {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  })
+// Token management functions
+export function setAuthToken(token: string): void {
+  if (typeof window !== "undefined") {
+    console.log('Saving auth token:', token);
+    localStorage.setItem("auth_token", token)
+  }
 }
 
 export function getAuthToken(): string | null {
-  try {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("auth_token")
-    }
-  } catch (error) {
-    console.error("Error getting auth token:", error)
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("auth_token")
   }
   return null
 }
 
 export function removeAuthToken(): void {
-  try {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("auth_token")
-    }
-  } catch (error) {
-    console.error("Error removing auth token:", error)
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("auth_token")
+    localStorage.removeItem("expert_data")
   }
+}
+
+export function setExpertData(expert: ExpertDto): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("expert_data", JSON.stringify(expert))
+  }
+}
+
+export function getExpertData(): ExpertDto | null {
+  if (typeof window !== "undefined") {
+    const data = localStorage.getItem("expert_data")
+    return data ? JSON.parse(data) : null
+  }
+  return null
 }

@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { ArrowRight, User, Loader2, Globe, GraduationCap } from "lucide-react"
+import { ArrowRight, User, Loader2, Globe, GraduationCap, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
-import { createUserProfile } from "@/lib/api"
+import { createExpertProfile } from "@/lib/api/users"
 
 // Constants for dropdown options
 const QUALIFICATIONS = [
@@ -72,13 +72,28 @@ export default function ProfileOnboardingPage() {
     languages: [] as string[],
     age: "",
     timezone: "",
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      country: "",
+      pincode: "",
+    },
   })
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    if (field.startsWith("address.")) {
+      const addressField = field.split(".")[1]
+      setFormData((prev) => ({
+        ...prev,
+        address: { ...prev.address, [addressField]: value },
+      }))
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }))
+    }
   }
 
   const handleLanguageChange = (languageValue: string, checked: boolean) => {
@@ -105,6 +120,21 @@ export default function ProfileOnboardingPage() {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      })
+      return false
+    }
+
+    // Check address fields
+    const requiredAddressFields = ["street", "city", "state", "country", "pincode"]
+    const missingAddressFields = requiredAddressFields.filter(
+      (field) => !formData.address[field as keyof typeof formData.address],
+    )
+
+    if (missingAddressFields.length > 0) {
+      toast({
+        title: "Missing address information",
+        description: "Please fill in all address fields.",
         variant: "destructive",
       })
       return false
@@ -160,18 +190,14 @@ export default function ProfileOnboardingPage() {
         yearsOfExperience: Number.parseInt(formData.yearsOfExperience),
       }
 
-      const response = await createUserProfile(profileData)
+      await createExpertProfile(profileData)
 
-      if (response.success) {
-        toast({
-          title: "Profile created!",
-          description: "Welcome to SereneNow. Your account is ready.",
-        })
+      toast({
+        title: "Profile created!",
+        description: "Welcome to SereneNow. Your account is ready.",
+      })
 
-        router.push("/dashboard")
-      } else {
-        throw new Error(response.error || "Failed to create profile")
-      }
+      router.push("/dashboard")
     } catch (error: any) {
       console.error("Profile creation error:", error)
       toast({
@@ -396,6 +422,95 @@ export default function ProfileOnboardingPage() {
                     className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark min-h-[100px]"
                     disabled={isLoading}
                   />
+                </div>
+              </div>
+
+              {/* Address Section */}
+              <div className="space-y-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <MapPin className="h-5 w-5 text-mint-dark" />
+                  <h3 className="text-lg font-semibold text-charcoal">Address Information</h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="street" className="text-sm font-medium text-charcoal">
+                      Street Address *
+                    </label>
+                    <Input
+                      id="street"
+                      type="text"
+                      placeholder="Enter your street address"
+                      value={formData.address.street}
+                      onChange={(e) => handleInputChange("address.street", e.target.value)}
+                      className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label htmlFor="city" className="text-sm font-medium text-charcoal">
+                        City *
+                      </label>
+                      <Input
+                        id="city"
+                        type="text"
+                        placeholder="Enter your city"
+                        value={formData.address.city}
+                        onChange={(e) => handleInputChange("address.city", e.target.value)}
+                        className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
+                        disabled={isLoading}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="state" className="text-sm font-medium text-charcoal">
+                        State/Province *
+                      </label>
+                      <Input
+                        id="state"
+                        type="text"
+                        placeholder="Enter your state or province"
+                        value={formData.address.state}
+                        onChange={(e) => handleInputChange("address.state", e.target.value)}
+                        className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label htmlFor="country" className="text-sm font-medium text-charcoal">
+                        Country *
+                      </label>
+                      <Input
+                        id="country"
+                        type="text"
+                        placeholder="Enter your country"
+                        value={formData.address.country}
+                        onChange={(e) => handleInputChange("address.country", e.target.value)}
+                        className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
+                        disabled={isLoading}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="pincode" className="text-sm font-medium text-charcoal">
+                        Postal/ZIP Code *
+                      </label>
+                      <Input
+                        id="pincode"
+                        type="text"
+                        placeholder="Enter your postal or ZIP code"
+                        value={formData.address.pincode}
+                        onChange={(e) => handleInputChange("address.pincode", e.target.value)}
+                        className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

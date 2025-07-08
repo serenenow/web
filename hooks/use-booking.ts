@@ -1,29 +1,46 @@
 "use client"
 
 import { useState } from "react"
-import { 
-  validateClientCode, 
-  getAvailableSlots, 
+import {
+  validateClientCode,
+  getAvailableSlots,
   createBooking,
-  initiateCashfreePayment
+  initiateCashfreePayment,
+  registerClient,
+  type VerifyCodeResponse,
+  type WebClientRegisterRequest,
 } from "@/lib/api/booking"
 
 export function useBooking() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const validateCode = async (code: string) => {
+  const validateCode = async (code: string): Promise<VerifyCodeResponse> => {
     setLoading(true)
     setError(null)
     try {
       const result = await validateClientCode(code)
-      
+
       // Store booking data in sessionStorage for persistence
       sessionStorage.setItem("bookingData", JSON.stringify(result))
-      
+
       return result
     } catch (err: any) {
       setError(err.message || "Failed to validate code")
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const registerNewClient = async (clientData: WebClientRegisterRequest) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await registerClient(clientData)
+      return result
+    } catch (err: any) {
+      setError(err.message || "Failed to register client")
       throw err
     } finally {
       setLoading(false)
@@ -65,14 +82,14 @@ export function useBooking() {
       setLoading(false)
     }
   }
-  
+
   // Process payment - used by booking form
   const processPayment = async (bookingResult: {
-    bookingId: string;
-    orderId: string;
-    status: string;
-    paymentSessionId: string;
-    orderAmount: number;
+    bookingId: string
+    orderId: string
+    status: string
+    paymentSessionId: string
+    orderAmount: number
   }) => {
     setLoading(true)
     setError(null)
@@ -87,7 +104,7 @@ export function useBooking() {
         return {
           verified: true,
           appointmentId: bookingResult.bookingId,
-          status: "confirmed"
+          status: "confirmed",
         }
       } else {
         throw new Error("Invalid booking status or missing payment session ID")
@@ -99,15 +116,16 @@ export function useBooking() {
       setLoading(false)
     }
   }
-  
+
   // NOTE: Payment verification is handled by backend webhooks
 
   return {
     loading,
     error,
     validateCode,
+    registerNewClient,
     fetchAvailableSlots,
     bookSession,
-    processPayment
+    processPayment,
   }
 }

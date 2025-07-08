@@ -5,39 +5,54 @@ import { useRouter } from "next/navigation"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { SetupChecklist } from "@/components/setup-checklist"
 import { DashboardContent } from "@/components/dashboard-content"
+import { getAuthToken, getExpertData } from "@/lib/api/auth"
+import { fetchDashboardData, DashboardData } from "@/lib/api/dashboard"
 
 export default function DashboardPage() {
-  const [user] = useState({
+  const [user, setUser] = useState({
     name: "Dr. Sarah Johnson",
     email: "sarah@example.com",
+    id: ""
   })
 
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    services: [],
+    appointments: [],
+    isNewUser: true
+  })
   const [isNewUser, setIsNewUser] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    // Simulate loading and auth check
-    const checkAuth = () => {
+    // Check authentication and load user data
+    const checkAuth = async () => {
       try {
-        // For demo purposes, we'll simulate authentication
-        // In real app, this would check actual auth token
-        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+        const token = getAuthToken()
+        const expertData = getExpertData()
 
-        // For testing, we'll allow access even without token
-        // Uncomment the lines below to require actual authentication
-        // if (!token) {
-        //   router.push("/login")
-        //   return
-        // }
+        if (!token) {
+          router.push("/login")
+          return
+        }
 
-        // Check setup status
-        const setupComplete = typeof window !== "undefined" ? localStorage.getItem("setup_complete") : null
-        if (setupComplete === "true") {
-          setIsNewUser(false)
+        // Load expert data if available
+        if (expertData) {
+          setUser({
+            name: expertData.name,
+            email: expertData.email,
+            id: expertData.id
+          })
+          
+          // Fetch dashboard data using expert ID
+          const data = await fetchDashboardData(expertData.id)
+          setDashboardData(data)
+          console.log(data.isNewUser);
+          setIsNewUser(data.isNewUser)
         }
       } catch (error) {
         console.error("Auth check error:", error)
+        router.push("/login")
       } finally {
         setIsLoading(false)
       }
@@ -95,7 +110,11 @@ export default function DashboardPage() {
           </div>
 
           {/* Content */}
-          {isNewUser ? <SetupChecklist onStepClick={handleSetupStep} /> : <DashboardContent isNewUser={false} />}
+          {isNewUser ? <SetupChecklist onStepClick={handleSetupStep} /> : <DashboardContent 
+            isNewUser={false}
+            services={dashboardData.services}
+            appointments={dashboardData.appointments}
+          />}
         </div>
       </main>
     </div>

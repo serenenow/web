@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
 import { sendVerificationCode } from "@/lib/api/auth"
 
 export default function LoginPage() {
@@ -27,6 +26,15 @@ export default function LoginPage() {
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!email.trim()) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (!validateEmail(email)) {
       toast({
         title: "Invalid email",
@@ -39,20 +47,17 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await sendVerificationCode(email)
+      await sendVerificationCode(email)
 
-      if (response.success) {
-        toast({
-          title: "Code sent!",
-          description: `We've sent a 6-digit code to ${email}`,
-        })
+      toast({
+        title: "Code sent!",
+        description: "Please check your email for the verification code.",
+      })
 
-        router.push(`/verify-code?email=${encodeURIComponent(email)}`)
-      } else {
-        throw new Error(response.message || "Failed to send code")
-      }
+      // Navigate to verify code page with email parameter
+      router.push(`/verify-code?email=${encodeURIComponent(email)}`)
     } catch (error: any) {
-      console.error("Send code error:", error)
+      console.error("Send verification code error:", error)
       toast({
         title: "Something went wrong",
         description: error.message || "Failed to send verification code. Please try again.",
@@ -60,6 +65,16 @@ export default function LoginPage() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleEnterCodeClick = () => {
+    if (email.trim() && validateEmail(email)) {
+      // If valid email is entered, navigate with email
+      router.push(`/verify-code?email=${encodeURIComponent(email)}`)
+    } else {
+      // If no valid email, navigate without email (user will need to enter it)
+      router.push("/verify-code")
     }
   }
 
@@ -74,10 +89,8 @@ export default function LoginPage() {
               SereneNow
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-charcoal mb-2">Welcome to SereneNow</h1>
-          <p className="text-charcoal/70 text-sm">
-            Log in or sign up with your email. We'll send you a 6-digit code to continue.
-          </p>
+          <h1 className="text-2xl font-bold text-charcoal mb-2">Welcome Back</h1>
+          <p className="text-charcoal/70 text-sm">Enter your email to receive a verification code</p>
         </div>
 
         {/* Login Form */}
@@ -91,7 +104,7 @@ export default function LoginPage() {
             <form onSubmit={handleSendCode} className="space-y-6">
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium text-charcoal">
-                  Email address
+                  Email Address
                 </label>
                 <Input
                   id="email"
@@ -101,13 +114,14 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
                   disabled={isLoading}
+                  autoComplete="email"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
-                disabled={!email || isLoading}
+                className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white"
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <>
@@ -116,7 +130,7 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    Send Login Code
+                    Send Verification Code
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
@@ -124,27 +138,20 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-charcoal/60">
-                Already have a code?{" "}
-                <Link href="/verify-code" className="text-mint-dark hover:text-mint-dark/80 font-medium">
-                  Enter it here
-                </Link>
-              </p>
+              <button
+                onClick={handleEnterCodeClick}
+                className="text-sm text-mint-dark hover:text-mint-dark/80 underline"
+                disabled={isLoading}
+              >
+                Already have a code? Enter here
+              </button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <div className="mt-8 text-center">
+        <div className="mt-6 text-center">
           <p className="text-xs text-charcoal/50">
-            By continuing, you agree to our{" "}
-            <Link href="/terms-of-service" className="text-mint-dark hover:underline">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy-policy" className="text-mint-dark hover:underline">
-              Privacy Policy
-            </Link>
+            By continuing, you agree to our Terms of Service and Privacy Policy
           </p>
         </div>
       </div>

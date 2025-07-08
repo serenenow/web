@@ -1,8 +1,87 @@
 // User profile related API calls
 import { apiRequest } from "./base"
-import { getAuthToken, removeAuthToken } from "./auth"
 
-interface ProfileData {
+interface AddressDto {
+  userId?: string
+  street: string
+  city: string
+  state: string
+  stateCode: string // 2-character state code for GST (e.g., "MH" for Maharashtra)
+  country: string
+  pincode: string
+}
+
+interface WebExpertRegisterRequest {
+  name: string
+  email: string
+  timeZone: string
+  phoneNumber: string
+  yearsOfExperience: number
+  qualification: string
+  description: string
+  gender: string
+  pictureUrl: string
+  languages: string
+  rciNumber: string
+  age: number
+  address: AddressDto
+}
+
+export interface ExpertDto {
+  id: string
+  email: string
+  name: string
+  qualification: string
+  pictureUrl: string
+  authSource: string
+  activationStatus: string
+  timeZone: string
+  firebaseTokenId?: string
+}
+
+export interface ServiceDto {
+  id: string
+  title: string
+  description: string
+  price: number
+  durationMin: number
+  bufferMin: number
+  cancellationDeadlineHours: number
+  rescheduleDeadlineHours: number
+  cancellationPercent: number
+}
+
+export interface ClientDto {
+  id: string
+  name: string
+  email: string
+  phoneNumber: string
+}
+
+export interface ExpertAppointment {
+  id: string
+  startTime: string
+  endTime: string
+  client: ClientDto
+  service: ServiceDto
+  location: string
+  status: string
+  notes?: string
+}
+
+export interface ExpertResponse {
+  accessToken: string
+  hasSetupProfile: boolean
+  expert: ExpertDto
+}
+
+export interface CreateProfileResponse {
+  success: boolean
+  data?: ExpertDto
+  error?: string
+}
+
+export async function createExpertProfile(profileData: {
   firstName: string
   lastName: string
   phone: string
@@ -15,85 +94,79 @@ interface ProfileData {
   languages: string[]
   age: number
   timezone: string
-}
-
-interface CreateProfileResponse {
-  success: boolean
-  data?: {
-    id: string
-    email: string
-    profile: ProfileData
+  address: {
+    street: string
+    city: string
+    state: string
+    country: string
+    pincode: string
   }
-  error?: string
-}
-
-export async function createUserProfile(profileData: ProfileData): Promise<CreateProfileResponse> {
+}): Promise<CreateProfileResponse> {
   try {
-    const token = getAuthToken()
+    // Get expert data from localStorage to get email
+    const expertData = JSON.parse(localStorage.getItem("expert_data") || "{}")
 
-    if (!token) {
-      throw new Error("No authentication token found")
+    // Map gender values to backend enum
+    const genderMapping: { [key: string]: string } = {
+      male: "MALE",
+      female: "FEMALE",
+      "non-binary": "NON_BINARY",
+      "prefer-not-to-say": "NOT_SPECIFIED",
     }
 
-    return await apiRequest<CreateProfileResponse>("/users/profile", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
+    const requestData: WebExpertRegisterRequest = {
+      name: `${profileData.firstName} ${profileData.lastName}`,
+      email: expertData.email || "",
+      timeZone: profileData.timezone,
+      phoneNumber: profileData.phone,
+      yearsOfExperience: profileData.yearsOfExperience,
+      qualification: profileData.qualification,
+      description: profileData.bio || "",
+      gender: genderMapping[profileData.gender] || "NOT_SPECIFIED",
+      pictureUrl: "", // Will be handled separately if needed
+      languages: profileData.languages.join(","),
+      rciNumber: profileData.rciNumber || "",
+      age: profileData.age,
+      address: {
+        userId: expertData.id || "",
+        street: profileData.address.street,
+        city: profileData.address.city,
+        state: profileData.address.state,
+        stateCode: "", // Will be empty since we're not using state codes anymore
+        country: profileData.address.country,
+        pincode: profileData.address.pincode,
       },
-      body: JSON.stringify(profileData),
-    })
-  } catch (error: any) {
-    if (error.status === 401) {
-      removeAuthToken()
-      throw new Error("Session expired. Please login again.")
     }
+
+    const response = await apiRequest<ExpertResponse>("/web/auth/add-expert", {
+      method: "POST",
+      body: JSON.stringify(requestData),
+    })
+    
+    // Store expert data and token in localStorage for use across the app
+    if (response) {
+      localStorage.setItem('expertData', JSON.stringify(response.expert))
+      localStorage.setItem('auth_token', response.accessToken)
+    }
+
+    return {
+      success: true,
+      data: response.expert
+    }
+  } catch (error: any) {
     throw error
   }
 }
 
 export async function getUserProfile(): Promise<any> {
-  try {
-    const token = getAuthToken()
-
-    if (!token) {
-      throw new Error("No authentication token found")
-    }
-
-    return await apiRequest("/users/profile", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-  } catch (error: any) {
-    if (error.status === 401) {
-      removeAuthToken()
-      throw new Error("Session expired. Please login again.")
-    }
-    throw error
-  }
+  return await apiRequest("/users/profile", {
+    method: "GET",
+  })
 }
 
-export async function updateUserProfile(profileData: Partial<ProfileData>): Promise<any> {
-  try {
-    const token = getAuthToken()
-
-    if (!token) {
-      throw new Error("No authentication token found")
-    }
-
-    return await apiRequest("/users/profile", {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(profileData),
-    })
-  } catch (error: any) {
-    if (error.status === 401) {
-      removeAuthToken()
-      throw new Error("Session expired. Please login again.")
-    }
-    throw error
-  }
+export async function updateUserProfile(profileData: any): Promise<any> {
+  return await apiRequest("/users/profile", {
+    method: "PUT",
+    body: JSON.stringify(profileData),
+  })
 }

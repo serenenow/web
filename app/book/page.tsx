@@ -22,20 +22,30 @@ export default function BookingCodeEntry() {
     try {
       const result = await validateCode(clientCode)
 
-      if (result.valid && result.therapist && result.service) {
-        // Store the validated data in sessionStorage for the booking page
+      // Check if client needs to register (empty ID means new client)
+      if (!result.client.id || result.client.id === "") {
+        // Store the validation result for the registration page
         sessionStorage.setItem(
-          "bookingData",
+          "pendingBookingData",
           JSON.stringify({
-            client: result.client,
-            therapist: result.therapist,
-            service: result.service,
+            ...result,
             code: clientCode,
           }),
         )
 
-        // Redirect to booking page
-        router.push(`/book/${result.therapist.id}/${result.service.id}?code=${clientCode}`)
+        // Redirect to client registration
+        router.push(`/book/register?code=${clientCode}`)
+      } else {
+        // Existing client - check if multiple services
+        if (result.services.length > 1) {
+          // Multiple services - show service selection
+          router.push(`/book/services?code=${clientCode}`)
+        } else if (result.services.length === 1) {
+          // Single service - go directly to booking
+          router.push(`/book/${result.expert.id}/${result.services[0].id}?code=${clientCode}`)
+        } else {
+          throw new Error("No services available for this code")
+        }
       }
     } catch (err) {
       // Error is handled by the hook

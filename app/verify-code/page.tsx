@@ -5,20 +5,19 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
-import { ArrowRight, Loader2, RefreshCw } from "lucide-react"
+import { ArrowRight, Shield, Loader2, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import { PinInput } from "@/components/pin-input"
-import Link from "next/link"
-import { verifyCode, resendVerificationCode } from "@/lib/api"
+import { verifyCode, sendVerificationCode, setAuthToken, setExpertData } from "@/lib/api/auth"
 
 export default function VerifyCodePage() {
   const [code, setCode] = useState("")
+  const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isResending, setIsResending] = useState(false)
-  const [resendTimer, setResendTimer] = useState(0)
-  const [email, setEmail] = useState("")
+  const [showEmailInput, setShowEmailInput] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -27,23 +26,51 @@ export default function VerifyCodePage() {
     const emailParam = searchParams.get("email")
     if (emailParam) {
       setEmail(emailParam)
+      setShowEmailInput(false)
+    } else {
+      setShowEmailInput(true)
     }
   }, [searchParams])
 
-  useEffect(() => {
-    if (resendTimer > 0) {
-      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
-      return () => clearTimeout(timer)
-    }
-  }, [resendTimer])
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!email.trim()) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!validateEmail(email)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!code.trim()) {
+      toast({
+        title: "Code required",
+        description: "Please enter the verification code.",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (code.length !== 6) {
       toast({
         title: "Invalid code",
-        description: "Please enter the complete 6-digit code.",
+        description: "Please enter a 6-digit verification code.",
         variant: "destructive",
       })
       return
@@ -54,33 +81,27 @@ export default function VerifyCodePage() {
     try {
       const response = await verifyCode(email, code)
 
-      if (response.success) {
-        if (response.isNewUser) {
-          toast({
-            title: "Account created!",
-            description: "Welcome to SereneNow. Let's set up your profile.",
-          })
-          router.push("/onboarding/profile")
-        } else {
-          toast({
-            title: "Welcome back!",
-            description: "Successfully logged in.",
-          })
-          router.push("/dashboard")
-        }
+      // Store the access token and expert data
+      setAuthToken(response.accessToken)
+      setExpertData(response.expert)
+
+      toast({
+        title: "Login successful!",
+        description: "Welcome to SereneNow.",
+      })
+
+      // Check if profile setup is needed
+      console.log("Has set profile "+ response.hasSetupProfile);
+      if (response.hasSetupProfile) {
+        router.push("/dashboard")
       } else {
-        toast({
-          title: "Invalid code",
-          description: "The code you entered is incorrect or has expired.",
-          variant: "destructive",
-        })
-        setCode("")
+        router.push("/onboarding/profile")
       }
     } catch (error: any) {
       console.error("Verify code error:", error)
       toast({
-        title: "Something went wrong",
-        description: error.message || "Failed to verify code. Please try again.",
+        title: "Verification failed",
+        description: error.message || "Invalid verification code. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -89,28 +110,38 @@ export default function VerifyCodePage() {
   }
 
   const handleResendCode = async () => {
-    if (resendTimer > 0) return
+    if (!email.trim()) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address first.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!validateEmail(email)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      })
+      return
+    }
 
     setIsResending(true)
 
     try {
-      const response = await resendVerificationCode(email)
+      await sendVerificationCode(email)
 
-      if (response.success) {
-        toast({
-          title: "Code sent!",
-          description: `We've sent a new 6-digit code to ${email}`,
-        })
-
-        setResendTimer(60) // 60 second cooldown
-      } else {
-        throw new Error(response.message || "Failed to resend code")
-      }
+      toast({
+        title: "Code sent!",
+        description: "A new verification code has been sent to your email.",
+      })
     } catch (error: any) {
       console.error("Resend code error:", error)
       toast({
         title: "Failed to resend",
-        description: error.message || "Could not send a new code. Please try again.",
+        description: error.message || "Failed to resend verification code. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -131,13 +162,9 @@ export default function VerifyCodePage() {
           </div>
           <h1 className="text-2xl font-bold text-charcoal mb-2">Enter Verification Code</h1>
           <p className="text-charcoal/70 text-sm">
-            {email ? (
-              <>
-                Enter the 6-digit code sent to <span className="font-medium text-mint-dark">{email}</span>
-              </>
-            ) : (
-              "Enter the 6-digit code sent to your email"
-            )}
+            {showEmailInput
+              ? "Enter your email and the 6-digit code sent to you"
+              : `We've sent a 6-digit code to ${email}`}
           </p>
         </div>
 
@@ -145,20 +172,56 @@ export default function VerifyCodePage() {
         <Card className="border-mint/20 shadow-lg">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-center w-12 h-12 bg-mint/10 rounded-full mx-auto">
-              <span className="text-2xl">🔐</span>
+              <Shield className="h-6 w-6 text-mint-dark" />
             </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleVerifyCode} className="space-y-6">
-              <div className="space-y-4">
-                <label className="text-sm font-medium text-charcoal block text-center">Verification Code</label>
-                <PinInput value={code} onChange={setCode} length={6} disabled={isLoading} />
+              {showEmailInput && (
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium text-charcoal">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-charcoal/50" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark pl-10"
+                      disabled={isLoading || isResending}
+                      autoComplete="email"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label htmlFor="code" className="text-sm font-medium text-charcoal">
+                  Verification Code
+                </label>
+                <Input
+                  id="code"
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  value={code}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "").slice(0, 6)
+                    setCode(value)
+                  }}
+                  className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark text-center text-lg tracking-widest"
+                  disabled={isLoading || isResending}
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                />
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
-                disabled={code.length !== 6 || isLoading}
+                className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white"
+                disabled={isLoading || isResending}
               >
                 {isLoading ? (
                   <>
@@ -167,48 +230,33 @@ export default function VerifyCodePage() {
                   </>
                 ) : (
                   <>
-                    Verify & Continue
+                    Verify Code
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
               </Button>
             </form>
 
-            <div className="mt-6 text-center space-y-3">
-              <Button
-                variant="ghost"
+            <div className="mt-6 text-center">
+              <button
                 onClick={handleResendCode}
-                disabled={resendTimer > 0 || isResending}
-                className="text-mint-dark hover:text-mint-dark/80 hover:bg-mint/10"
+                className="text-sm text-mint-dark hover:text-mint-dark/80 underline"
+                disabled={isLoading || isResending}
               >
-                {isResending ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : resendTimer > 0 ? (
-                  `Resend code in ${resendTimer}s`
-                ) : (
-                  "Didn't receive a code? Resend"
-                )}
-              </Button>
-
-              <p className="text-xs text-charcoal/50">
-                Wrong email?{" "}
-                <Link href="/login" className="text-mint-dark hover:underline">
-                  Go back
-                </Link>
-              </p>
+                {isResending ? "Sending..." : "Didn't receive the code? Resend"}
+              </button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Demo Instructions */}
-        <div className="mt-6 p-4 bg-mint/10 rounded-lg border border-mint/20">
-          <p className="text-xs text-charcoal/70 text-center">
-            <strong>Demo:</strong> Use code <code className="bg-mint/20 px-1 rounded">123456</code> for existing user or{" "}
-            <code className="bg-mint/20 px-1 rounded">654321</code> for new user
-          </p>
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => router.push("/login")}
+            className="text-xs text-charcoal/50 hover:text-charcoal/70 underline"
+            disabled={isLoading || isResending}
+          >
+            Back to login
+          </button>
         </div>
       </div>
     </div>

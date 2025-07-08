@@ -8,12 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { ServiceDto, ExpertAppointment } from "@/lib/api/users"
+import { format } from "date-fns"
 
 interface DashboardContentProps {
   isNewUser: boolean
+  services: ServiceDto[]
+  appointments: ExpertAppointment[]
 }
 
-export function DashboardContent({ isNewUser }: DashboardContentProps) {
+export function DashboardContent({ isNewUser, services, appointments }: DashboardContentProps) {
   const [inviteForm, setInviteForm] = useState({
     name: "",
     email: "",
@@ -21,47 +25,35 @@ export function DashboardContent({ isNewUser }: DashboardContentProps) {
     paymentMode: "",
   })
 
-  // Mock data for returning users
-  const upcomingAppointments = [
-    {
-      id: "1",
-      client: "John D.",
-      service: "Individual Therapy",
-      time: "Today, 2:00 PM",
-      hasLink: true,
-    },
-    {
-      id: "2",
-      client: "Sarah M.",
-      service: "Couples Counseling",
-      time: "Tomorrow, 10:00 AM",
-      hasLink: false,
-    },
-    {
-      id: "3",
-      client: "Mike R.",
-      service: "Individual Therapy",
-      time: "Dec 5, 3:00 PM",
-      hasLink: true,
-    },
-  ]
-
-  const services = [
-    {
-      id: "1",
-      name: "Individual Therapy",
-      duration: "50 minutes",
-      fee: "₹2,000",
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "Couples Counseling",
-      duration: "60 minutes",
-      fee: "₹3,000",
-      status: "active",
-    },
-  ]
+  // Format appointment time to display format
+  const formatAppointmentTime = (startTime: string): string => {
+    try {
+      const date = new Date(startTime)
+      const today = new Date()
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      
+      if (date.toDateString() === today.toDateString()) {
+        return `Today, ${format(date, 'h:mm a')}`
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return `Tomorrow, ${format(date, 'h:mm a')}`
+      } else {
+        return format(date, 'MMM d, h:mm a')
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error)
+      return startTime // Return original if parsing fails
+    }
+  }
+  
+  // Transform services for display
+  const displayServices = Array.isArray(services) ? services.map(service => ({
+    id: service.id,
+    name: service.title,
+    duration: `${service.durationMin} minutes`,
+    fee: `₹${service.price.toLocaleString()}`,
+    status: 'active'
+  })) : []
 
   const handleInviteSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,18 +79,18 @@ export function DashboardContent({ isNewUser }: DashboardContentProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-3 md:space-y-4">
-            {upcomingAppointments.length > 0 ? (
-              upcomingAppointments.map((appointment) => (
+            {Array.isArray(appointments) && appointments.length > 0 ? (
+              appointments.map((appointment) => (
                 <div
                   key={appointment.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-mint/5 rounded-lg gap-3"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-charcoal">{appointment.client}</p>
-                    <p className="text-sm text-charcoal/60">{appointment.service}</p>
-                    <p className="text-sm text-mint-dark font-medium">{appointment.time}</p>
+                    <p className="font-medium text-charcoal">{appointment.client.name}</p>
+                    <p className="text-sm text-charcoal/60">{appointment.service.title}</p>
+                    <p className="text-sm text-mint-dark font-medium">{formatAppointmentTime(appointment.startTime)}</p>
                   </div>
-                  {appointment.hasLink && (
+                  {appointment.status === 'CONFIRMED' && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -138,8 +130,8 @@ export function DashboardContent({ isNewUser }: DashboardContentProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-3 md:space-y-4">
-            {services.length > 0 ? (
-              services.map((service) => (
+            {displayServices.length > 0 ? (
+              displayServices.map((service) => (
                 <div
                   key={service.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-mint/5 rounded-lg gap-3"
@@ -221,7 +213,7 @@ export function DashboardContent({ isNewUser }: DashboardContentProps) {
                 <SelectValue placeholder="Select service" />
               </SelectTrigger>
               <SelectContent>
-                {services.map((service) => (
+                {displayServices.map((service) => (
                   <SelectItem key={service.id} value={service.id}>
                     {service.name} - {service.fee}
                   </SelectItem>
