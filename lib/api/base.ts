@@ -24,10 +24,17 @@ export function snakeToCamelCase(str: string): string {
  * @returns A new object with all keys converted to snake_case
  */
 export function convertKeysToSnakeCase(obj: any): any {
-  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
+  // Handle null or non-object values
+  if (obj === null || typeof obj !== 'object') {
     return obj;
   }
+  
+  // Handle arrays by mapping each item
+  if (Array.isArray(obj)) {
+    return obj.map(item => convertKeysToSnakeCase(item));
+  }
 
+  // Handle regular objects
   return Object.keys(obj).reduce((result: any, key: string) => {
     const snakeKey = camelToSnakeCase(key);
     const value = obj[key];
