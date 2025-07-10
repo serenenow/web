@@ -21,9 +21,20 @@ export default function BookingCodeEntry() {
 
     try {
       const result = await validateCode(clientCode)
+      
+      // Store the client response data for later use
+      sessionStorage.setItem(
+        "clientResponse",
+        JSON.stringify(result.clientResponse)
+      )
+      
+      // Store client access token in localStorage
+      if (result.clientResponse.accessToken) {
+        localStorage.setItem("client_auth_token", result.clientResponse.accessToken)
+      }
 
-      // Check if client needs to register (empty ID means new client)
-      if (!result.client.id || result.client.id === "") {
+      // Check if client needs to complete profile setup
+      if (!result.clientResponse.hasSetupProfile) {
         // Store the validation result for the registration page
         sessionStorage.setItem(
           "pendingBookingData",
@@ -36,7 +47,7 @@ export default function BookingCodeEntry() {
         // Redirect to client registration
         router.push(`/book/register?code=${clientCode}`)
       } else {
-        // Existing client - check if multiple services
+        // Existing client with complete profile - check if multiple services
         if (result.services.length > 1) {
           // Multiple services - show service selection
           router.push(`/book/services?code=${clientCode}`)

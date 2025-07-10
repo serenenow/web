@@ -55,8 +55,14 @@ export interface ServiceDetailDto {
   minHoursNotice: number
 }
 
-export interface VerifyCodeResponse {
+export interface ClientResponse {
+  accessToken: string
+  hasSetupProfile: boolean
   client: ClientDto
+}
+
+export interface VerifyCodeResponse {
+  clientResponse: ClientResponse
   expert: ExpertDto
   services: ServiceDetailDto[]
   allowDirectPayment: boolean
@@ -96,7 +102,7 @@ export interface WebClientRegisterRequest {
 export async function validateClientCode(code: string): Promise<VerifyCodeResponse> {
   const request: VerifyCodeRequest = { code }
 
-  return apiRequest<VerifyCodeResponse>("/web-booking/verify-client", {
+  return apiRequest<VerifyCodeResponse>("/web/auth/verify/client", {
     method: "POST",
     body: JSON.stringify(request),
   })
@@ -114,16 +120,17 @@ export async function registerClient(clientData: WebClientRegisterRequest): Prom
 export interface TimeSlot {
   startTime: string // ISO 8601 format
   endTime: string // ISO 8601 format
+  available?: boolean // Optional property for UI display
 }
 
 // Format the response to match what the UI expects
-interface FormattedTimeSlot {
+export interface FormattedTimeSlot {
   time: string
   available: boolean
   timezone: string
 }
 
-interface FormattedAvailableSlots {
+export interface FormattedAvailableSlots {
   dates: Array<{
     date: string
     day: string
@@ -233,35 +240,40 @@ export interface AppointmentResponse {
 // Create booking
 export async function createBooking(bookingData: {
   clientCode: string
-  therapistId: string
+  expertId: string
   serviceId: string
   date: string
   time: string
   paymentMode: "online" | "direct"
   message?: string
 }) {
-  // Find the selected time slot
-  const params = new URLSearchParams()
-  params.append("expert_id", bookingData.therapistId)
-  params.append("service_id", bookingData.serviceId)
-  params.append("selected_date", bookingData.date)
-
-  // Get available time slots for the selected date
-  const timeSlots = await apiRequest<TimeSlot[]>(`/service/slots?${params}`)
-
-  // Find the matching time slot
-  const selectedTimeStr = bookingData.time
-  const selectedTimeSlot = findTimeSlotByFormattedTime(timeSlots, selectedTimeStr)
-
-  if (!selectedTimeSlot) {
-    throw new Error("Selected time slot not found")
+    // Create a time slot from the selected time and date
+  const selectedTimeSlot = createTimeSlotFromString(bookingData.time, bookingData.date)
+  
+  // Get service details from API or use default values
+  // We'll use a simplified approach for now
+  let amount = 1500 // Default amount
+  
+  // Try to get the actual service price if we have access to it
+  try {
+    // Fetch the service details from sessionStorage
+    if (typeof window !== 'undefined') {
+      const bookingDataStr = sessionStorage.getItem('bookingData')
+      if (bookingDataStr) {
+        const bookingDataObj = JSON.parse(bookingDataStr)
+        const service = bookingDataObj.services?.find((s: any) => s.id === bookingData.serviceId)
+        if (service?.price) {
+          amount = service.price
+          console.log(`Using actual service price: ${amount}`)
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error getting service price:', err)
   }
-
-  // Calculate payment details (these would normally come from the service details)
-  // For now, we'll use placeholder values
-  const amount = 1500 // Base amount
-  const taxAmount = amount * 0.18 // 18% tax
-  const platformFee = amount * 0.03 // 3% platform fee
+  
+  const taxAmount = Math.round(amount * 0.18) // 18% tax
+  const platformFee = Math.round(amount * 0.035) // 3.5% platform fee
   const totalAmount = amount + taxAmount + platformFee
 
   // Create appointment request
@@ -269,7 +281,7 @@ export async function createBooking(bookingData: {
     startTime: selectedTimeSlot.startTime,
     endTime: selectedTimeSlot.endTime,
     serviceId: bookingData.serviceId,
-    expertId: bookingData.therapistId,
+    expertId: bookingData.expertId,
     clientId: bookingData.clientCode, // Using client code as ID for now
     location: Location.ONLINE, // Default to online
     notes: bookingData.message,
@@ -297,22 +309,36 @@ export async function createBooking(bookingData: {
   }
 }
 
-// Helper function to find a time slot by its formatted time string
-function findTimeSlotByFormattedTime(timeSlots: TimeSlot[], formattedTime: string): TimeSlot | undefined {
-  for (const slot of timeSlots) {
-    const startTime = new Date(slot.startTime)
-    const hours = startTime.getHours()
-    const minutes = startTime.getMinutes()
-
-    // Format as 12-hour time (e.g., "9:00 AM")
-    const slotFormattedTime = `${hours % 12 || 12}:${minutes.toString().padStart(2, "0")} ${hours >= 12 ? "PM" : "AM"}`
-
-    if (slotFormattedTime === formattedTime) {
-      return slot
-    }
+/**
+ * Parses a time string in 12-hour format (e.g., "9:00 AM") and creates a time slot object
+ * @param timeString - Time string in 12-hour format (e.g., "9:00 AM")
+ * @param dateString - Date string in ISO format
+ * @param durationMinutes - Duration in minutes (defaults to 60)
+ * @returns TimeSlot object with startTime and endTime
+ */
+export function createTimeSlotFromString(timeString: string, dateString: string, durationMinutes: number = 60): TimeSlot {
+  // Parse the time string
+  const [timePart, period] = timeString.split(' ')
+  const [hours, minutes] = timePart.split(':').map(Number)
+  
+  // Convert to 24-hour format
+  let hour24 = hours
+  if (period === "PM" && hours < 12) hour24 += 12
+  if (period === "AM" && hours === 12) hour24 = 0
+  
+  // Create date objects for start and end times
+  const startDate = new Date(dateString)
+  startDate.setHours(hour24, minutes, 0, 0)
+  
+  // End time is duration minutes later
+  const endDate = new Date(startDate)
+  endDate.setMinutes(endDate.getMinutes() + durationMinutes)
+  
+  return {
+    startTime: startDate.toISOString(),
+    endTime: endDate.toISOString(),
+    available: true
   }
-
-  return undefined
 }
 
 // Cashfree payment integration

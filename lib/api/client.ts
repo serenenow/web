@@ -64,3 +64,85 @@ export async function sendClientInvite(inviteRequest: SendClientInviteRequest): 
     body: JSON.stringify(inviteRequest),
   })
 }
+
+/**
+ * Gender enum
+ */
+export enum Gender {
+  MALE = "MALE",
+  FEMALE = "FEMALE",
+  NON_BINARY = "NON_BINARY",
+  PREFER_NOT_TO_SAY = "PREFER_NOT_TO_SAY"
+}
+
+/**
+ * Client status enum
+ */
+export enum ClientStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  BLOCKED = "BLOCKED"
+}
+
+/**
+ * Address data structure
+ */
+export interface AddressDto {
+  street: string
+  city: string
+  state: string
+  stateCode: string
+  country: string
+  pincode: string
+}
+
+/**
+ * Emergency contact data structure
+ */
+export interface EmergencyContactDto {
+  name: string
+  email?: string
+  phoneNumber: string
+  relation: string
+}
+
+/**
+ * TimeZone serializer for Kotlin compatibility
+ */
+export class TimeZoneSerializer {
+  static stringify(value: string): string {
+    return value
+  }
+  
+  static parse(value: string): string {
+    return value || new Intl.DateTimeFormat().resolvedOptions().timeZone
+  }
+}
+
+/**
+ * Client update request structure
+ */
+export interface ClientUpdateRequest {
+  id: string
+  name?: string
+  phoneNumber?: string
+  age?: number
+  gender?: Gender
+  pictureUrl?: string
+  timezone?: string
+  clientStatus?: ClientStatus
+  address?: AddressDto
+  emergencyContact?: EmergencyContactDto
+}
+
+/**
+ * Update client profile
+ * @param updateRequest The client update request data
+ * @returns Promise with the updated client
+ */
+export async function updateClientProfile(updateRequest: ClientUpdateRequest): Promise<Client> {
+  return apiRequest<Client>("/client/profile", {
+    method: "PUT",
+    body: JSON.stringify(updateRequest),
+  })
+}

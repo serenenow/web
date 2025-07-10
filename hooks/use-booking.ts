@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import {
   validateClientCode,
   getAvailableSlots,
@@ -9,24 +9,48 @@ import {
   registerClient,
   type VerifyCodeResponse,
   type WebClientRegisterRequest,
+  type FormattedAvailableSlots,
 } from "@/lib/api/booking"
+import { updateClientProfile, type ClientUpdateRequest } from "@/lib/api/client"
 
 export function useBooking() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [debugMode, setDebugMode] = useState(false)
+  
+  // Helper function to log debug info
+  const logDebug = (message: string, data?: any) => {
+    if (debugMode) {
+      console.log(`[Booking] ${message}`, data || '')
+    }
+  }
 
   const validateCode = async (code: string): Promise<VerifyCodeResponse> => {
     setLoading(true)
     setError(null)
     try {
       const result = await validateClientCode(code)
+      
+      logDebug('Received booking data from API', result)
+      
+      // Validate the result structure
+      if (!result.expert) {
+        console.error('Missing expert data in booking response')
+      }
+      
+      if (!result.services || result.services.length === 0) {
+        console.error('No services found in booking response')
+      }
 
       // Store booking data in sessionStorage for persistence
       sessionStorage.setItem("bookingData", JSON.stringify(result))
+      logDebug('Stored booking data in sessionStorage')
 
       return result
     } catch (err: any) {
-      setError(err.message || "Failed to validate code")
+      const errorMsg = err.message || "Failed to validate code"
+      setError(errorMsg)
+      console.error('Code validation error:', errorMsg)
       throw err
     } finally {
       setLoading(false)
@@ -46,24 +70,59 @@ export function useBooking() {
       setLoading(false)
     }
   }
-
-  const fetchAvailableSlots = async (therapistId: string, serviceId: string, date?: string) => {
+  
+  const updateProfile = async (updateData: ClientUpdateRequest) => {
     setLoading(true)
     setError(null)
     try {
-      const result = await getAvailableSlots(therapistId, serviceId, date)
+      const result = await updateClientProfile(updateData)
       return result
     } catch (err: any) {
-      setError(err.message || "Failed to get available slots")
+      setError(err.message || "Failed to update client profile")
       throw err
     } finally {
       setLoading(false)
     }
   }
 
+  // Cache for available slots to prevent redundant API calls
+  const slotsCache = useRef<Record<string, FormattedAvailableSlots>>({});
+  
+  const fetchAvailableSlots = async (expertId: string, serviceId: string, date?: string) => {
+    // Create a cache key based on the parameters
+    const cacheKey = `${expertId}_${serviceId}_${date || 'all'}`;
+    
+    // Check if we have cached results
+    if (slotsCache.current[cacheKey]) {
+      logDebug(`Using cached slots for ${cacheKey}`);
+      return slotsCache.current[cacheKey];
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      logDebug(`Fetching slots for expert: ${expertId}, service: ${serviceId}, date: ${date || 'all'}`);
+      const result = await getAvailableSlots(expertId, serviceId, date);
+      
+      // Cache the result
+      slotsCache.current[cacheKey] = result;
+      logDebug('Slots fetched successfully', result);
+      
+      return result;
+    } catch (err: any) {
+      const errorMsg = err.message || "Failed to get available slots";
+      setError(errorMsg);
+      console.error('Error fetching slots:', errorMsg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const bookSession = async (bookingData: {
     clientCode: string
-    therapistId: string
+    expertId: string
     serviceId: string
     date: string
     time: string
@@ -124,6 +183,7 @@ export function useBooking() {
     error,
     validateCode,
     registerNewClient,
+    updateProfile,
     fetchAvailableSlots,
     bookSession,
     processPayment,

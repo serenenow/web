@@ -121,9 +121,15 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
   
   // Add authorization token for non-auth endpoints
   if (!endpoint.includes("/auth/")) {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`
+    // Check for client token first (for client-specific endpoints)
+    const clientToken = typeof window !== "undefined" ? localStorage.getItem("client_auth_token") : null
+    // Fall back to expert token if no client token
+    const expertToken = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+    
+    if (clientToken) {
+      headers["Authorization"] = `Bearer ${clientToken}`
+    } else if (expertToken) {
+      headers["Authorization"] = `Bearer ${expertToken}`
     }
   }
 

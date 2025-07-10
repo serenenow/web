@@ -138,7 +138,7 @@ export async function createExpertProfile(profileData: {
       },
     }
 
-    const response = await apiRequest<ExpertResponse>("/web/auth/add-expert", {
+    const response = await apiRequest<ExpertResponse>("/web/auth/register/expert", {
       method: "POST",
       body: JSON.stringify(requestData),
     })

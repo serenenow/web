@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Gender } from "@/lib/api/client"
 import Image from "next/image"
 import { ArrowLeft, User, Phone, MapPin, UserCheck, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -28,45 +29,6 @@ const EMERGENCY_RELATIONS = [
   { value: "FRIEND", label: "Friend" },
   { value: "OTHER", label: "Other" },
   { value: "NOT_SPECIFIED", label: "Not Specified" },
-]
-
-const INDIAN_STATES = [
-  { value: "AN", label: "Andaman and Nicobar Islands", code: "AN" },
-  { value: "AP", label: "Andhra Pradesh", code: "AP" },
-  { value: "AR", label: "Arunachal Pradesh", code: "AR" },
-  { value: "AS", label: "Assam", code: "AS" },
-  { value: "BR", label: "Bihar", code: "BR" },
-  { value: "CG", label: "Chhattisgarh", code: "CG" },
-  { value: "CH", label: "Chandigarh", code: "CH" },
-  { value: "DH", label: "Dadra and Nagar Haveli", code: "DH" },
-  { value: "DD", label: "Daman and Diu", code: "DD" },
-  { value: "DL", label: "Delhi", code: "DL" },
-  { value: "GA", label: "Goa", code: "GA" },
-  { value: "GJ", label: "Gujarat", code: "GJ" },
-  { value: "HR", label: "Haryana", code: "HR" },
-  { value: "HP", label: "Himachal Pradesh", code: "HP" },
-  { value: "JK", label: "Jammu and Kashmir", code: "JK" },
-  { value: "JH", label: "Jharkhand", code: "JH" },
-  { value: "KA", label: "Karnataka", code: "KA" },
-  { value: "KL", label: "Kerala", code: "KL" },
-  { value: "LD", label: "Lakshadweep", code: "LD" },
-  { value: "MP", label: "Madhya Pradesh", code: "MP" },
-  { value: "MH", label: "Maharashtra", code: "MH" },
-  { value: "MN", label: "Manipur", code: "MN" },
-  { value: "ML", label: "Meghalaya", code: "ML" },
-  { value: "MZ", label: "Mizoram", code: "MZ" },
-  { value: "NL", label: "Nagaland", code: "NL" },
-  { value: "OR", label: "Odisha", code: "OR" },
-  { value: "PY", label: "Puducherry", code: "PY" },
-  { value: "PB", label: "Punjab", code: "PB" },
-  { value: "RJ", label: "Rajasthan", code: "RJ" },
-  { value: "SK", label: "Sikkim", code: "SK" },
-  { value: "TN", label: "Tamil Nadu", code: "TN" },
-  { value: "TS", label: "Telangana", code: "TS" },
-  { value: "TR", label: "Tripura", code: "TR" },
-  { value: "UP", label: "Uttar Pradesh", code: "UP" },
-  { value: "UK", label: "Uttarakhand", code: "UK" },
-  { value: "WB", label: "West Bengal", code: "WB" },
 ]
 
 export default function ClientRegistrationPage() {
@@ -95,7 +57,7 @@ export default function ClientRegistrationPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  const { registerNewClient, loading } = useBooking()
+  const { updateProfile, loading } = useBooking()
 
   useEffect(() => {
     // Get the code from URL params
@@ -110,12 +72,17 @@ export default function ClientRegistrationPage() {
       const data = JSON.parse(storedData) as VerifyCodeResponse & { code: string }
       setBookingData(data)
 
-      // Pre-fill email if available from the booking data
-      if (data.client.email) {
-        setFormData((prev) => ({ ...prev, email: data.client.email }))
+      // Store client access token in localStorage
+      if (data.clientResponse.accessToken) {
+        localStorage.setItem("client_auth_token", data.clientResponse.accessToken)
       }
-      if (data.client.name) {
-        setFormData((prev) => ({ ...prev, name: data.client.name }))
+
+      // Pre-fill email if available from the booking data
+      if (data.clientResponse.client.email) {
+        setFormData((prev) => ({ ...prev, email: data.clientResponse.client.email }))
+      }
+      if (data.clientResponse.client.name) {
+        setFormData((prev) => ({ ...prev, name: data.clientResponse.client.name }))
       }
     } else {
       // If no booking data, redirect back to code entry
@@ -125,13 +92,10 @@ export default function ClientRegistrationPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-
-    // Auto-fill state code when state is selected
+    
+    // Set stateCode same as state for backward compatibility
     if (field === "state") {
-      const selectedState = INDIAN_STATES.find((state) => state.value === value)
-      if (selectedState) {
-        setFormData((prev) => ({ ...prev, stateCode: selectedState.code }))
-      }
+      setFormData((prev) => ({ ...prev, stateCode: value }))
     }
   }
 
@@ -215,13 +179,17 @@ export default function ClientRegistrationPage() {
     }
 
     try {
-      const registrationData: WebClientRegisterRequest = {
+      // Get client ID from the stored client response
+      const clientId = bookingData.clientResponse.client.id
+      
+      // Create client update request
+      const updateData = {
+        id: clientId,
         name: formData.name,
-        email: formData.email,
-        timeZone: bookingData.expert.timeZone, // Use expert's timezone
         phoneNumber: formData.phoneNumber,
         age: Number.parseInt(formData.age),
-        gender: formData.gender,
+        gender: formData.gender as Gender,
+        timezone: bookingData.expert.timeZone, // Use expert's timezone
         address: {
           street: formData.street,
           city: formData.city,
@@ -238,12 +206,17 @@ export default function ClientRegistrationPage() {
         },
       }
 
-      const registeredClient = await registerNewClient(registrationData)
+      // Update client profile
+      const updatedClient = await updateProfile(updateData)
 
-      // Update the booking data with the registered client
+      // Update the booking data with the updated client
       const updatedBookingData = {
         ...bookingData,
-        client: registeredClient,
+        clientResponse: {
+          ...bookingData.clientResponse,
+          hasSetupProfile: true,
+          client: updatedClient
+        }
       }
 
       // Store updated booking data
@@ -251,8 +224,8 @@ export default function ClientRegistrationPage() {
       sessionStorage.removeItem("pendingBookingData")
 
       toast({
-        title: "Registration successful!",
-        description: "Your account has been created. Proceeding to booking...",
+        title: "Profile setup complete!",
+        description: "Your profile has been updated. Proceeding to booking...",
       })
 
       // Proceed to service selection or booking
@@ -262,10 +235,10 @@ export default function ClientRegistrationPage() {
         router.push(`/book/${bookingData.expert.id}/${bookingData.services[0].id}?code=${clientCode}`)
       }
     } catch (error: any) {
-      console.error("Registration error:", error)
+      console.error("Profile update error:", error)
       toast({
-        title: "Registration failed",
-        description: error.message || "Failed to register. Please try again.",
+        title: "Profile update failed",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       })
     }
@@ -417,7 +390,7 @@ export default function ClientRegistrationPage() {
                       </label>
                       <Select
                         value={formData.gender}
-                        onValueChange={(value) => handleInputChange("gender", value)}
+                        onValueChange={(value: string) => handleInputChange("gender", value)}
                         disabled={loading}
                       >
                         <SelectTrigger className="border-mint/20 focus:border-mint-dark">
@@ -476,24 +449,17 @@ export default function ClientRegistrationPage() {
 
                       <div className="space-y-2">
                         <label htmlFor="state" className="text-sm font-medium text-charcoal">
-                          State *
+                          State/Province *
                         </label>
-                        <Select
+                        <Input
+                          id="state"
+                          type="text"
+                          placeholder="Enter your state or province"
                           value={formData.state}
-                          onValueChange={(value) => handleInputChange("state", value)}
+                          onChange={(e) => handleInputChange("state", e.target.value)}
+                          className="border-mint/20 focus:border-mint-dark"
                           disabled={loading}
-                        >
-                          <SelectTrigger className="border-mint/20 focus:border-mint-dark">
-                            <SelectValue placeholder="Select state" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {INDIAN_STATES.map((state) => (
-                              <SelectItem key={state.value} value={state.value}>
-                                {state.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        />
                       </div>
                     </div>
 
@@ -515,15 +481,16 @@ export default function ClientRegistrationPage() {
 
                       <div className="space-y-2">
                         <label htmlFor="country" className="text-sm font-medium text-charcoal">
-                          Country
+                          Country *
                         </label>
                         <Input
                           id="country"
                           type="text"
+                          placeholder="Enter your country"
                           value={formData.country}
                           onChange={(e) => handleInputChange("country", e.target.value)}
                           className="border-mint/20 focus:border-mint-dark"
-                          disabled={true}
+                          disabled={loading}
                         />
                       </div>
                     </div>
@@ -591,7 +558,7 @@ export default function ClientRegistrationPage() {
                       </label>
                       <Select
                         value={formData.emergencyRelation}
-                        onValueChange={(value) => handleInputChange("emergencyRelation", value)}
+                        onValueChange={(value: string) => handleInputChange("emergencyRelation", value)}
                         disabled={loading}
                       >
                         <SelectTrigger className="border-mint/20 focus:border-mint-dark">
@@ -626,7 +593,6 @@ export default function ClientRegistrationPage() {
               </form>
             </CardContent>
           </Card>
-
           <div className="mt-6 text-center">
             <p className="text-xs text-charcoal/50">* Required fields</p>
           </div>
