@@ -78,7 +78,7 @@ export async function fetchUpcomingAppointments(expertId: string): Promise<Exper
  */
 export function getStoredExpertData(): ExpertDto | null {
   try {
-    const expertDataString = localStorage.getItem('expertData')
+    const expertDataString = localStorage.getItem('expert_data')
     if (!expertDataString) return null
     
     return JSON.parse(expertDataString) as ExpertDto

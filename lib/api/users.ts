@@ -103,8 +103,12 @@ export async function createExpertProfile(profileData: {
   }
 }): Promise<CreateProfileResponse> {
   try {
-    // Get expert data from localStorage to get email
+    // Get expert data from localStorage to get id
     const expertData = JSON.parse(localStorage.getItem("expert_data") || "{}")
+    
+    if (!expertData.id) {
+      throw new Error("Expert ID not found in local storage")
+    }
 
     // Map gender values to backend enum
     const genderMapping: { [key: string]: string } = {
@@ -114,10 +118,10 @@ export async function createExpertProfile(profileData: {
       "prefer-not-to-say": "NOT_SPECIFIED",
     }
 
-    const requestData: WebExpertRegisterRequest = {
+    // Create the ExpertUpdateRequest structure
+    const requestData = {
+      id: expertData.id,
       name: `${profileData.firstName} ${profileData.lastName}`,
-      email: expertData.email || "",
-      timeZone: profileData.timezone,
       phoneNumber: profileData.phone,
       yearsOfExperience: profileData.yearsOfExperience,
       qualification: profileData.qualification,
@@ -128,7 +132,7 @@ export async function createExpertProfile(profileData: {
       rciNumber: profileData.rciNumber || "",
       age: profileData.age,
       address: {
-        userId: expertData.id || "",
+        userId: expertData.id,
         street: profileData.address.street,
         city: profileData.address.city,
         state: profileData.address.state,
@@ -136,17 +140,17 @@ export async function createExpertProfile(profileData: {
         country: profileData.address.country,
         pincode: profileData.address.pincode,
       },
+      timezone: profileData.timezone
     }
 
-    const response = await apiRequest<ExpertResponse>("/web/auth/register/expert", {
-      method: "POST",
+    const response = await apiRequest<ExpertResponse>("/expert/profile", {
+      method: "PUT",
       body: JSON.stringify(requestData),
     })
     
-    // Store expert data and token in localStorage for use across the app
-    if (response) {
-      localStorage.setItem('expertData', JSON.stringify(response.expert))
-      localStorage.setItem('auth_token', response.accessToken)
+    // Store updated expert data in localStorage
+    if (response && response.expert) {
+      localStorage.setItem('expert_data', JSON.stringify(response.expert))
     }
 
     return {

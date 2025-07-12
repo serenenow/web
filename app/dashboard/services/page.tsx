@@ -14,19 +14,16 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { initiateGoogleAuth, getGoogleConnectionStatus, type GoogleConnectionStatus } from "@/lib/api/google"
 import { addService, getExpertServices, type ServiceAddRequest, type Service, Location } from "@/lib/api/service"
-import { getExpertData } from "@/lib/api/auth"
+import { useExpertData } from "@/hooks/use-expert-data"
 
 
 
 export default function ServicesPage() {
-  const [user, setUser] = useState({
-    name: "",
-    email: "",
-    id: "", // Expert ID for API calls
-  })
+  // Use our custom hook for expert data
+  const { expertData: user, isLoading: isLoadingUser } = useExpertData()
 
   const [services, setServices] = useState<Service[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingServices, setIsLoadingServices] = useState(false)
 
   const [showAddForm, setShowAddForm] = useState(false)
   const [showGooglePrompt, setShowGooglePrompt] = useState(false)
@@ -38,7 +35,7 @@ export default function ServicesPage() {
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false)
 
   const [newService, setNewService] = useState<Partial<ServiceAddRequest>>({
-    expertId: user.id,
+    expertId: "", // Will be set when needed
     title: "",
     description: "",
     price: 0,
@@ -52,28 +49,32 @@ export default function ServicesPage() {
     minHoursNotice: 2,
   })
 
-  // Check Google connection status, load user data, and fetch services on component mount
+  // Check Google connection status and fetch services when user data is available
   useEffect(() => {
-    // Load expert data from local storage
-    const expertData = getExpertData()
-    if (expertData) {
-      setUser({
-        name: expertData.name || "",
-        email: expertData.email || "",
-        id: expertData.id || "",
-      })
+    if (user.id) {
+      checkGoogleStatus()
+      fetchServices()
     }
-    
-    checkGoogleStatus()
-    fetchServices()
-  }, [])
+  }, [user.id])
 
   const checkGoogleStatus = async () => {
+    if (!user.id) {
+      console.error("Expert Id is not set")
+      return
+    }
+    
     try {
-      const status = await getGoogleConnectionStatus()
+      const status = await getGoogleConnectionStatus(user.id)
       setGoogleStatus(status)
     } catch (error) {
       console.error("Failed to check Google status:", error)
+      
+      // Set default status when API call fails (including 404 not found)
+      setGoogleStatus({
+        is_connected: false,
+        calendar_access: false,
+        meet_access: false
+      })
     }
   }
 
@@ -105,45 +106,35 @@ export default function ServicesPage() {
   }
 
   const fetchServices = async () => {
-    setIsLoading(true)
-    try {
-      // Get expert ID from local storage if not already set in state
-      let expertId = user.id
-      if (!expertId) {
-        const expertData = getExpertData()
-        expertId = expertData?.id || ""
-        
-        // Update user state if we got data from local storage
-        if (expertData) {
-          setUser({
-            name: expertData.name || "",
-            email: expertData.email || "",
-            id: expertId,
-          })
-        }
-      }
-      
-      if (!expertId) {
-        console.error("No expert ID available")
-        setIsLoading(false)
-        return
-      }
-      
-      const fetchedServices = await getExpertServices(expertId)
+    if (!user.id) {
+      console.error("No expert ID available")
+      return
+    }
+    
+    setIsLoadingServices(true)
+    try {      
+      const fetchedServices = await getExpertServices(user.id)
       setServices(fetchedServices)
     } catch (error) {
       console.error("Failed to fetch services:", error)
-      // Show error message to user
+      // Show error message to user - consider using a toast notification instead of alert in production
       alert("Failed to fetch services. Please try again.")
     } finally {
-      setIsLoading(false)
+      setIsLoadingServices(false)
     }
   }
 
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!user.id) {
+      console.error("Expert ID is not available")
+      alert("You must be logged in to add a service")
+      return
+    }
+
     if (!newService.title || !newService.description || !newService.price) {
+      alert("Please fill in all required fields")
       return
     }
 
@@ -228,11 +219,37 @@ export default function ServicesPage() {
                 <h1 className="text-3xl font-bold text-charcoal mb-2">Services</h1>
                 <p className="text-charcoal/70">Manage your therapy services and pricing</p>
               </div>
-              <Button onClick={() => setShowAddForm(true)} className="bg-mint-dark hover:bg-mint-dark/90 text-white">
+              <Button 
+                onClick={() => setShowAddForm(true)} 
+                className="bg-mint-dark hover:bg-mint-dark/90 text-white"
+                disabled={!user.id}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Service
               </Button>
             </div>
+            
+            {/* Loading state */}
+            {(isLoadingUser || isLoadingServices) && (
+              <div className="flex justify-center my-8">
+                <p className="text-charcoal/70">Loading...</p>
+              </div>
+            )}
+            
+            {/* No user ID warning */}
+            {!isLoadingUser && !user.id && (
+              <Card className="border-amber-200 bg-amber-50 mb-6">
+                <CardContent className="p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-amber-800">Authentication Required</h4>
+                      <p className="text-amber-700">Please log in to manage your services.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Add Service Form */}
             {showAddForm && (
@@ -560,7 +577,7 @@ export default function ServicesPage() {
               ))}
             </div>
 
-            {isLoading && !showAddForm && (
+            {isLoadingServices && !showAddForm && (
               <Card className="border-mint/20">
                 <CardContent className="p-12 text-center">
                   <div className="animate-pulse flex flex-col items-center">
@@ -572,7 +589,7 @@ export default function ServicesPage() {
               </Card>
             )}
             
-            {!isLoading && services.length === 0 && !showAddForm && (
+            {!isLoadingServices && services.length === 0 && !showAddForm && (
               <Card className="border-mint/20">
                 <CardContent className="p-12 text-center">
                   <div className="w-16 h-16 bg-mint/10 rounded-full flex items-center justify-center mx-auto mb-4">
