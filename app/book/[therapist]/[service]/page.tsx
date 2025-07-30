@@ -9,7 +9,7 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <BookingForm therapistId={therapist} serviceId={service} />
+      <BookingForm expertId={therapist} serviceId={service} />
     </div>
   )
 }

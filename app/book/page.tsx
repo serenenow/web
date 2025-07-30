@@ -9,11 +9,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import { useBooking } from "@/hooks/use-booking"
+import { useClientData } from "@/hooks/use-client-data"
 
 export default function BookingCodeEntry() {
   const [clientCode, setClientCode] = useState("")
   const router = useRouter()
   const { validateCode, loading, error } = useBooking()
+  const { setClientResponseData } = useClientData()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,21 +23,25 @@ export default function BookingCodeEntry() {
 
     try {
       const result = await validateCode(clientCode)
+      
+      // Store the client response data using our centralized approach
+      setClientResponseData(result.clientResponse)
 
-      if (result.valid && result.therapist && result.service) {
-        // Store the validated data in sessionStorage for the booking page
-        sessionStorage.setItem(
-          "bookingData",
-          JSON.stringify({
-            client: result.client,
-            therapist: result.therapist,
-            service: result.service,
-            code: clientCode,
-          }),
-        )
-
-        // Redirect to booking page
-        router.push(`/book/${result.therapist.id}/${result.service.id}?code=${clientCode}`)
+      // Check if client needs to complete profile setup
+      if (!result.clientResponse.hasSetupProfile) {
+        // Redirect to client registration
+        router.push(`/book/register?code=${clientCode}`)
+      } else {
+        // Existing client with complete profile - check if multiple services
+        if (result.services.length > 1) {
+          // Multiple services - show service selection
+          router.push(`/book/services?code=${clientCode}`)
+        } else if (result.services.length === 1) {
+          // Single service - go directly to booking
+          router.push(`/book/${result.expert.id}/${result.services[0].id}?code=${clientCode}`)
+        } else {
+          throw new Error("No services available for this code")
+        }
       }
     } catch (err) {
       // Error is handled by the hook
