@@ -1,4 +1,5 @@
 import { apiRequest } from "./base"
+import { getBrowserTimezone } from "@/lib/utils/time-utils"
 
 /**
  * Auth source enum for client authentication
@@ -59,7 +60,7 @@ export async function getExpertClients(expertId: string): Promise<Client[]> {
  * @returns Promise with the response
  */
 export async function sendClientInvite(inviteRequest: SendClientInviteRequest): Promise<any> {
-  return apiRequest<any>("/invite/web/client/send", {
+  return apiRequest<any>("/invite/client/send", {
     method: "POST",
     body: JSON.stringify(inviteRequest),
   })
@@ -115,7 +116,7 @@ export class TimeZoneSerializer {
   }
   
   static parse(value: string): string {
-    return value || new Intl.DateTimeFormat().resolvedOptions().timeZone
+    return value || getBrowserTimezone()
   }
 }
 

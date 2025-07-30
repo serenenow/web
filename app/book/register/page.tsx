@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useBooking } from "@/hooks/use-booking"
+import { useClientData } from "@/hooks/use-client-data"
 import type { VerifyCodeResponse, WebClientRegisterRequest } from "@/lib/api/booking"
 
 const GENDERS = [
@@ -58,6 +59,7 @@ export default function ClientRegistrationPage() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const { updateProfile, loading } = useBooking()
+  const { setClientResponseData } = useClientData()
 
   useEffect(() => {
     // Get the code from URL params
@@ -72,10 +74,8 @@ export default function ClientRegistrationPage() {
       const data = JSON.parse(storedData) as VerifyCodeResponse & { code: string }
       setBookingData(data)
 
-      // Store client access token in localStorage
-      if (data.clientResponse.accessToken) {
-        localStorage.setItem("client_auth_token", data.clientResponse.accessToken)
-      }
+      // Store client data in our centralized system
+      setClientResponseData(data.clientResponse)
 
       // Pre-fill email if available from the booking data
       if (data.clientResponse.client.email) {
@@ -221,7 +221,6 @@ export default function ClientRegistrationPage() {
 
       // Store updated booking data
       sessionStorage.setItem("bookingData", JSON.stringify(updatedBookingData))
-      sessionStorage.removeItem("pendingBookingData")
 
       toast({
         title: "Profile setup complete!",

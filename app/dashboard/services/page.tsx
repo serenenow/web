@@ -12,11 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import { initiateGoogleAuth, getGoogleConnectionStatus, type GoogleConnectionStatus } from "@/lib/api/google"
+import {
+  getGoogleConnectionStatus,
+  exchangeGoogleAuthCode,
+  type GoogleConnectionStatus,
+  type GoogleAccessRequest,
+} from "@/lib/api/google"
 import { addService, getExpertServices, type ServiceAddRequest, type Service, Location } from "@/lib/api/service"
 import { useExpertData } from "@/hooks/use-expert-data"
-
-
 
 export default function ServicesPage() {
   // Use our custom hook for expert data
@@ -28,9 +31,9 @@ export default function ServicesPage() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showGooglePrompt, setShowGooglePrompt] = useState(false)
   const [googleStatus, setGoogleStatus] = useState<GoogleConnectionStatus>({
-    is_connected: false,
-    calendar_access: false,
-    meet_access: false,
+    isConnected: false,
+    calendarAccess: false,
+    meetAccess: false,
   })
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false)
 
@@ -62,18 +65,18 @@ export default function ServicesPage() {
       console.error("Expert Id is not set")
       return
     }
-    
+
     try {
       const status = await getGoogleConnectionStatus(user.id)
       setGoogleStatus(status)
     } catch (error) {
       console.error("Failed to check Google status:", error)
-      
+
       // Set default status when API call fails (including 404 not found)
       setGoogleStatus({
-        is_connected: false,
-        calendar_access: false,
-        meet_access: false
+        isConnected: false,
+        calendarAccess: false,
+        meetAccess: false,
       })
     }
   }
@@ -92,15 +95,78 @@ export default function ServicesPage() {
     setIsConnectingGoogle(true)
 
     try {
-      const authResponse = await initiateGoogleAuth()
+      // Create the popup URL - use the Next.js route
+      const popupUrl = `${window.location.origin}/google-oauth-popup.html`
 
-      // Redirect to Google OAuth
-      window.location.href = authResponse.auth_url
+      // Open popup window
+      const popup = window.open(
+        popupUrl,
+        "google-oauth",
+        "width=500,height=600,scrollbars=yes,resizable=yes,left=" +
+          (window.screen.width / 2 - 250) +
+          ",top=" +
+          (window.screen.height / 2 - 300),
+      )
+
+      if (!popup) {
+        throw new Error("Popup blocked. Please allow popups for this site.")
+      }
+
+      // Listen for message from popup
+      const handleMessage = async (event: MessageEvent) => {
+        // Verify origin for security
+        if (event.origin !== window.location.origin) {
+          return
+        }
+
+        if (event.data.type === "GOOGLE_OAUTH_SUCCESS") {
+          try {
+            // Prepare API request
+            const request: GoogleAccessRequest = {
+              userId: user.id,
+              accessToken: "", // Empty as specified
+              serverAuthCode: event.data.code,
+              codeVerifier: event.data.codeVerifier,
+            }
+
+            // Make API call to exchange code for tokens (returns empty success response)
+            await exchangeGoogleAuthCode(request)
+
+            // Since API call succeeded, refresh the Google status
+            await checkGoogleStatus()
+
+            // Show success message
+            alert("Google account connected successfully!")
+          } catch (error) {
+            console.error("Failed to exchange auth code:", error)
+            alert("Failed to complete Google connection. Please try again.")
+          } finally {
+            // Clean up event listener
+            window.removeEventListener("message", handleMessage)
+            setIsConnectingGoogle(false)
+          }
+        } else if (event.data.type === "GOOGLE_OAUTH_ERROR") {
+          console.error("OAuth error:", event.data.error)
+          alert("Failed to connect Google account. Please try again.")
+          window.removeEventListener("message", handleMessage)
+          setIsConnectingGoogle(false)
+        }
+      }
+
+      // Add event listener
+      window.addEventListener("message", handleMessage)
+
+      // Check if popup was closed manually
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed)
+          window.removeEventListener("message", handleMessage)
+          setIsConnectingGoogle(false)
+        }
+      }, 1000)
     } catch (error) {
       console.error("Failed to connect to Google:", error)
-      // Show error message to user
-      alert("Failed to connect to Google. Please try again.")
-    } finally {
+      alert(error instanceof Error ? error.message : "Failed to connect to Google. Please try again.")
       setIsConnectingGoogle(false)
     }
   }
@@ -110,9 +176,9 @@ export default function ServicesPage() {
       console.error("No expert ID available")
       return
     }
-    
+
     setIsLoadingServices(true)
-    try {      
+    try {
       const fetchedServices = await getExpertServices(user.id)
       setServices(fetchedServices)
     } catch (error) {
@@ -159,7 +225,7 @@ export default function ServicesPage() {
     try {
       // Make API call to add service
       await addService(serviceRequest)
-      
+
       // Re-fetch services to get the updated list
       await fetchServices()
 
@@ -219,8 +285,8 @@ export default function ServicesPage() {
                 <h1 className="text-3xl font-bold text-charcoal mb-2">Services</h1>
                 <p className="text-charcoal/70">Manage your therapy services and pricing</p>
               </div>
-              <Button 
-                onClick={() => setShowAddForm(true)} 
+              <Button
+                onClick={() => setShowAddForm(true)}
                 className="bg-mint-dark hover:bg-mint-dark/90 text-white"
                 disabled={!user.id}
               >
@@ -228,14 +294,14 @@ export default function ServicesPage() {
                 Add Service
               </Button>
             </div>
-            
+
             {/* Loading state */}
             {(isLoadingUser || isLoadingServices) && (
               <div className="flex justify-center my-8">
                 <p className="text-charcoal/70">Loading...</p>
               </div>
             )}
-            
+
             {/* No user ID warning */}
             {!isLoadingUser && !user.id && (
               <Card className="border-amber-200 bg-amber-50 mb-6">
@@ -356,24 +422,23 @@ export default function ServicesPage() {
                       {/* Google Meet Connection Prompt */}
                       {showGooglePrompt && (
                         <Card
-                          className={`border-2 ${googleStatus.is_connected ? "border-green-200 bg-green-50" : "border-blue-200 bg-blue-50"}`}
+                          className={`border-2 ${googleStatus.isConnected ? "border-green-200 bg-green-50" : "border-blue-200 bg-blue-50"}`}
                         >
                           <CardContent className="p-4">
                             <div className="flex items-start space-x-3">
                               <div className="flex-shrink-0">
-                                {googleStatus.is_connected ? (
+                                {googleStatus.isConnected ? (
                                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                                 ) : (
                                   <Video className="h-5 w-5 text-blue-600 mt-0.5" />
                                 )}
                               </div>
                               <div className="flex-1">
-                                {googleStatus.is_connected ? (
+                                {googleStatus.isConnected ? (
                                   <>
                                     <h4 className="text-sm font-medium text-green-900 mb-1">
                                       Google Account Connected
                                     </h4>
-                                    <p className="text-sm text-green-700 mb-2">✅ Connected to: {googleStatus.email}</p>
                                     <p className="text-sm text-green-600">
                                       Your clients will automatically receive calendar invites with Google Meet links
                                       for their sessions.
@@ -545,7 +610,8 @@ export default function ServicesPage() {
                             {service.durationMin} min
                           </div>
                           <div className="flex items-center">
-                            <IndianRupee className="h-4 w-4 mr-1" />{service.price.toLocaleString()}
+                            <IndianRupee className="h-4 w-4 mr-1" />
+                            {service.price.toLocaleString()}
                           </div>
                           <div>{getLocationDisplay(service.location)}</div>
                           <div>🔔 {service.minHoursNotice}h notice</div>
@@ -588,7 +654,7 @@ export default function ServicesPage() {
                 </CardContent>
               </Card>
             )}
-            
+
             {!isLoadingServices && services.length === 0 && !showAddForm && (
               <Card className="border-mint/20">
                 <CardContent className="p-12 text-center">

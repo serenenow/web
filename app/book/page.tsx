@@ -9,11 +9,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import { useBooking } from "@/hooks/use-booking"
+import { useClientData } from "@/hooks/use-client-data"
 
 export default function BookingCodeEntry() {
   const [clientCode, setClientCode] = useState("")
   const router = useRouter()
   const { validateCode, loading, error } = useBooking()
+  const { setClientResponseData } = useClientData()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,28 +24,11 @@ export default function BookingCodeEntry() {
     try {
       const result = await validateCode(clientCode)
       
-      // Store the client response data for later use
-      sessionStorage.setItem(
-        "clientResponse",
-        JSON.stringify(result.clientResponse)
-      )
-      
-      // Store client access token in localStorage
-      if (result.clientResponse.accessToken) {
-        localStorage.setItem("client_auth_token", result.clientResponse.accessToken)
-      }
+      // Store the client response data using our centralized approach
+      setClientResponseData(result.clientResponse)
 
       // Check if client needs to complete profile setup
       if (!result.clientResponse.hasSetupProfile) {
-        // Store the validation result for the registration page
-        sessionStorage.setItem(
-          "pendingBookingData",
-          JSON.stringify({
-            ...result,
-            code: clientCode,
-          }),
-        )
-
         // Redirect to client registration
         router.push(`/book/register?code=${clientCode}`)
       } else {

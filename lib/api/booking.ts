@@ -1,5 +1,11 @@
 // Booking related API calls (from your existing api.ts)
 import { apiRequest } from "./base"
+import { 
+  createTimeSlotFromString as createTimeSlotUtil,
+  formatDate,
+  formatTime12Hour,
+  getBrowserTimezone
+} from "@/lib/utils/time-utils"
 
 // Types for the new API
 export interface VerifyCodeRequest {
@@ -98,6 +104,52 @@ export interface WebClientRegisterRequest {
   emergencyContact: EmergencyContactDto
 }
 
+// Payment and appointment types
+export enum PaymentProvider {
+  CASH_FREE = "CASH_FREE",
+  RAZORPAY = "RAZORPAY",
+  DIRECT = "DIRECT",
+}
+
+export enum Location {
+  IN_PERSON = "IN_PERSON",
+  PHONE_CALL = "PHONE_CALL",
+  GOOGLE_MEET = "GOOGLE_MEET"
+}
+
+export interface AppointmentPayment {
+  amount: number
+  taxAmount: number
+  platformFee: number
+  totalAmount: number
+  gateway: PaymentProvider
+}
+
+export interface AppointmentAddRequest {
+  startTime: string // ISO 8601 format
+  endTime: string // ISO 8601 format
+  serviceId: string
+  expertId: string
+  clientId: string
+  location: Location
+  notes?: string
+  paymentData: AppointmentPayment
+}
+
+export interface AppointmentResponse {
+  id: string
+  orderId: string
+  paymentSessionId: string
+  orderAmount: number
+}
+
+// Cashfree integration types
+declare global {
+  interface Window {
+    Cashfree: any
+  }
+}
+
 // Client code validation - Updated to use new API
 export async function validateClientCode(code: string): Promise<VerifyCodeResponse> {
   const request: VerifyCodeRequest = { code }
@@ -188,103 +240,134 @@ function formatTimeSlots(timeSlots: TimeSlot[]): FormattedTimeSlot[] {
     const hours = startTime.getHours()
     const minutes = startTime.getMinutes()
 
-    // Format as 12-hour time (e.g., "9:00 AM")
-    const formattedTime = `${hours % 12 || 12}:${minutes.toString().padStart(2, "0")} ${hours >= 12 ? "PM" : "AM"}`
+    // Format as 24-hour time (e.g., "09:00") for internal use
+    // The UI will format it to 12-hour format using formatTime12Hour
+    const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
 
     return {
       time: formattedTime,
       available: true, // Assume all returned slots are available
-      timezone: "IST", // Hardcoded for now
+      timezone: getBrowserTimezone(), // Use browser's timezone
     }
   })
 }
 
-// Appointment types
-export enum PaymentProvider {
-  CASH_FREE = "CASH_FREE",
-  RAZORPAY = "RAZORPAY",
-  DIRECT = "DIRECT",
+// Helper function to create time slot from string
+// This is now a wrapper around the centralized utility
+export function createTimeSlotFromString(
+  timeString: string,
+  dateString: string,
+  timezone: string = getBrowserTimezone(),
+  durationMinutes = 60
+): { startTime: string; endTime: string } {
+  return createTimeSlotUtil(timeString, dateString, timezone, durationMinutes)
 }
 
-export enum Location {
-  ONLINE = "ONLINE",
-  IN_PERSON = "IN_PERSON",
+// API call to create appointment
+export const createAppointment = async (appointmentData: AppointmentAddRequest): Promise<AppointmentResponse> => {
+  return apiRequest<AppointmentResponse>("/appointment", {
+    method: "POST",
+    body: JSON.stringify(appointmentData),
+  })
 }
 
-export interface AppointmentPayment {
-  amount: number
-  taxAmount: number
-  platformFee: number
-  totalAmount: number
-  gateway: PaymentProvider
+// Load Cashfree SDK
+export const loadCashfreeSDK = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window !== "undefined" && window.Cashfree) {
+      resolve()
+      return
+    }
+
+    if (typeof window === "undefined") {
+      reject(new Error("Window object not available"))
+      return
+    }
+
+    const script = document.createElement("script")
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js"
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error("Failed to load Cashfree SDK"))
+    document.head.appendChild(script)
+  })
 }
 
-export interface AppointmentAddRequest {
-  startTime: string // ISO 8601 format
-  endTime: string // ISO 8601 format
-  serviceId: string
-  expertId: string
+// Handle Cashfree payment
+export const handleCashfreePayment = async (paymentSessionId: string, orderId: string): Promise<boolean> => {
+  try {
+    await loadCashfreeSDK()
+
+    if (typeof window === "undefined" || !window.Cashfree) {
+      throw new Error("Cashfree SDK not available")
+    }
+
+    const cashfree = window.Cashfree({
+      mode: process.env.NODE_ENV === "production" ? "production" : "sandbox",
+    })
+
+    const checkoutOptions = {
+      paymentSessionId: paymentSessionId,
+      redirectTarget: "_modal",
+    }
+
+    console.log("Cashfree making the payment...")
+    const result = await cashfree.checkout(checkoutOptions)
+    console.log("Cashfree payment result "+ result)
+    if (result.error) {
+      console.error("Payment failed:", result.error)
+      throw new Error("Payment failed. Please try again.")
+    }
+
+    if (result.redirect) {
+      console.log("Payment completed successfully")
+      return true
+    }
+    if (result.paymentDetails) {
+        // This will be called whenever the payment is completed irrespective of transaction status
+        console.log("Payment has been completed, Check for Payment Status");
+        console.log(result.paymentDetails.paymentMessage);
+        return true
+      }
+
+    return false
+  } catch (error) {
+    console.error("Cashfree payment error:", error)
+    throw new Error("Payment processing failed. Please try again.")
+  }
+}
+
+// Create booking with complete flow
+export async function createBookingWithPayment(bookingData: {
   clientId: string
-  location: Location
-  notes?: string
-  paymentData: AppointmentPayment
-}
-
-export interface AppointmentResponse {
-  id: string
-  orderId: string
-  paymentSessionId: string
-  orderAmount: number
-}
-
-// Create booking
-export async function createBooking(bookingData: {
-  clientCode: string
   expertId: string
   serviceId: string
   date: string
   time: string
+  timezone?: string
+  timeSlot?: { startTime: string; endTime: string }
   paymentMode: "online" | "direct"
-  message?: string
+  serviceDetails: ServiceDetailDto
 }) {
-    // Create a time slot from the selected time and date
-  const selectedTimeSlot = createTimeSlotFromString(bookingData.time, bookingData.date)
-  
-  // Get service details from API or use default values
-  // We'll use a simplified approach for now
-  let amount = 1500 // Default amount
-  
-  // Try to get the actual service price if we have access to it
-  try {
-    // Fetch the service details from sessionStorage
-    if (typeof window !== 'undefined') {
-      const bookingDataStr = sessionStorage.getItem('bookingData')
-      if (bookingDataStr) {
-        const bookingDataObj = JSON.parse(bookingDataStr)
-        const service = bookingDataObj.services?.find((s: any) => s.id === bookingData.serviceId)
-        if (service?.price) {
-          amount = service.price
-          console.log(`Using actual service price: ${amount}`)
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Error getting service price:', err)
-  }
-  
+  // Use provided timeSlot if available, otherwise create one with the specified timezone
+  const timeSlot = bookingData.timeSlot || 
+    createTimeSlotFromString(bookingData.time, bookingData.date, bookingData.timezone || getBrowserTimezone(), bookingData.serviceDetails.durationMin)
+
+  // Calculate payment amounts
+  const amount = bookingData.serviceDetails.price
   const taxAmount = Math.round(amount * 0.18) // 18% tax
   const platformFee = Math.round(amount * 0.035) // 3.5% platform fee
   const totalAmount = amount + taxAmount + platformFee
 
   // Create appointment request
   const appointmentRequest: AppointmentAddRequest = {
-    startTime: selectedTimeSlot.startTime,
-    endTime: selectedTimeSlot.endTime,
+    startTime: timeSlot.startTime,
+    endTime: timeSlot.endTime,
     serviceId: bookingData.serviceId,
     expertId: bookingData.expertId,
-    clientId: bookingData.clientCode, // Using client code as ID for now
-    location: Location.ONLINE, // Default to online
-    notes: bookingData.message,
+    clientId: bookingData.clientId,
+    location: bookingData.serviceDetails.location === "GOOGLE_MEET" ? Location.GOOGLE_MEET : Location.IN_PERSON,
+    notes: "",
     paymentData: {
       amount: amount,
       taxAmount: taxAmount,
@@ -294,94 +377,14 @@ export async function createBooking(bookingData: {
     },
   }
 
-  // Send appointment creation request
-  const appointmentResponse = await apiRequest<AppointmentResponse>("/appointment", {
-    method: "POST",
-    body: JSON.stringify(appointmentRequest),
-  })
+  console.log("Creating appointment:", appointmentRequest)
 
-  return {
-    bookingId: appointmentResponse.id,
-    orderId: appointmentResponse.orderId,
-    status: bookingData.paymentMode === "online" ? "pending_payment" : "confirmed",
-    paymentSessionId: appointmentResponse.paymentSessionId,
-    orderAmount: appointmentResponse.orderAmount,
-  }
-}
+  // Create appointment
+  const appointmentResponse = await createAppointment(appointmentRequest)
 
-/**
- * Parses a time string in 12-hour format (e.g., "9:00 AM") and creates a time slot object
- * @param timeString - Time string in 12-hour format (e.g., "9:00 AM")
- * @param dateString - Date string in ISO format
- * @param durationMinutes - Duration in minutes (defaults to 60)
- * @returns TimeSlot object with startTime and endTime
- */
-export function createTimeSlotFromString(timeString: string, dateString: string, durationMinutes: number = 60): TimeSlot {
-  // Parse the time string
-  const [timePart, period] = timeString.split(' ')
-  const [hours, minutes] = timePart.split(':').map(Number)
-  
-  // Convert to 24-hour format
-  let hour24 = hours
-  if (period === "PM" && hours < 12) hour24 += 12
-  if (period === "AM" && hours === 12) hour24 = 0
-  
-  // Create date objects for start and end times
-  const startDate = new Date(dateString)
-  startDate.setHours(hour24, minutes, 0, 0)
-  
-  // End time is duration minutes later
-  const endDate = new Date(startDate)
-  endDate.setMinutes(endDate.getMinutes() + durationMinutes)
-  
-  return {
-    startTime: startDate.toISOString(),
-    endTime: endDate.toISOString(),
-    available: true
-  }
-}
+  console.log("Appointment created:", appointmentResponse)
 
-// Cashfree payment integration
-export async function initiateCashfreePayment(paymentSessionId: string) {
-  // This function will be called from the client side
-  // It will redirect to the Cashfree payment page
-  if (typeof window !== "undefined") {
-    // Load Cashfree SDK if not already loaded
-    if (!(window as any).Cashfree) {
-      const script = document.createElement("script")
-      script.src = "https://sdk.cashfree.com/js/ui/2.0.0/cashfree.sandbox.js"
-      script.async = true
-      document.body.appendChild(script)
-
-      // Wait for script to load
-      await new Promise<void>((resolve) => {
-        script.onload = () => resolve()
-      })
-    }
-
-    // Initialize Cashfree payment
-    const cashfree = new (window as any).Cashfree(paymentSessionId)
-
-    // Configure callbacks
-    cashfree.redirect({
-      onSuccess: (data: any) => {
-        // Handle successful payment
-        console.log("Payment success:", data)
-        // Redirect to success page or show success message
-        window.location.href = `/book/success?orderId=${data.order_id}`
-      },
-      onFailure: (data: any) => {
-        // Handle payment failure
-        console.error("Payment failed:", data)
-        // Show error message
-        alert("Payment failed. Please try again.")
-      },
-      onClose: () => {
-        // Handle payment window close
-        console.log("Payment window closed")
-      },
-    })
-  }
+  return appointmentResponse
 }
 
 // NOTE: Payment verification is handled by backend webhooks

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { createExpertProfile } from "@/lib/api/users"
+import { legacyTimezones } from "@/lib/utils/time-utils"
 
 // Constants for dropdown options
 const QUALIFICATIONS = [
@@ -45,18 +46,8 @@ const LANGUAGES = [
   { value: "other", label: "Other" },
 ]
 
-const TIMEZONES = [
-  { value: "Asia/Kolkata", label: "India Standard Time (IST)" },
-  { value: "America/New_York", label: "Eastern Time (ET)" },
-  { value: "America/Chicago", label: "Central Time (CT)" },
-  { value: "America/Denver", label: "Mountain Time (MT)" },
-  { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
-  { value: "Europe/London", label: "Greenwich Mean Time (GMT)" },
-  { value: "Europe/Berlin", label: "Central European Time (CET)" },
-  { value: "Asia/Dubai", label: "Gulf Standard Time (GST)" },
-  { value: "Asia/Singapore", label: "Singapore Standard Time (SGT)" },
-  { value: "Australia/Sydney", label: "Australian Eastern Time (AET)" },
-]
+// Use legacyTimezones from centralized time-utils for backward compatibility
+const TIMEZONES = legacyTimezones
 
 export default function ProfileOnboardingPage() {
   const [formData, setFormData] = useState({

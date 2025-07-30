@@ -11,6 +11,18 @@ import { type AvailabilityDto, getExpertAvailability, updateExpertAvailability }
 import { getExpertData } from "@/lib/api/auth"
 import { format, parseISO } from "date-fns"
 import { formatInTimeZone, getTimezoneOffset } from "date-fns-tz"
+import { 
+  convertTimeToTimezone, 
+  convertTimeToUTC, 
+  formatTime12Hour, 
+  generateTimeOptions, 
+  timezones,
+  legacyTimezones,
+  getBrowserTimezone,
+  getTimezoneDisplayWithOffset,
+  getTimezonesGroupedByRegion,
+  TimeZoneInfo
+} from "@/lib/utils/time-utils"
 
 interface TimeSlot {
   id: string
@@ -61,68 +73,8 @@ export default function AvailabilityPage() {
   const [isFullDayOff, setIsFullDayOff] = useState(true)
   const [customTimeSlots, setCustomTimeSlots] = useState<TimeSlot[]>([])
 
-  // Helper functions
-  const formatTime12Hour = (time24: string) => {
-    const [hours, minutes] = time24.split(":")
-    const hour = Number.parseInt(hours, 10)
-    const period = hour >= 12 ? "PM" : "AM"
-    const hour12 = hour % 12 || 12
-    return `${hour12}:${minutes} ${period}`
-  }
-  
-  // Generate time options with 30-minute intervals in 12-hour format
-  const timeOptions = Array.from({ length: 48 }, (_, i) => {
-    const hour = Math.floor(i / 2)
-    const minute = i % 2 === 0 ? "00" : "30"
-    const hourStr = hour.toString().padStart(2, "0")
-    const time24 = `${hourStr}:${minute}`
-    const time12 = formatTime12Hour(time24)
-    return { value: time24, label: time12 }
-  })
-
-  const timezones = [
-    { value: "Asia/Kolkata", label: "India Standard Time (IST)" },
-    { value: "America/New_York", label: "Eastern Time (ET)" },
-    { value: "America/Chicago", label: "Central Time (CT)" },
-    { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
-    { value: "Europe/London", label: "Greenwich Mean Time (GMT)" },
-    { value: "Europe/Berlin", label: "Central European Time (CET)" },
-  ]
-
-  // Helper function to convert time from UTC to local timezone
-  const convertTimeToTimezone = (isoTime: string, targetTimezone: string): string => {
-    try {
-      // Format the ISO time string directly to the target timezone
-      return formatInTimeZone(parseISO(isoTime), targetTimezone, 'HH:mm')
-    } catch (error) {
-      console.error('Error converting time:', error)
-      // Fallback to extracting time directly from string
-      return isoTime.substring(11, 16)
-    }
-  }
-
-  // Helper function to convert local time to UTC without Z suffix
-  const convertTimeToUTC = (timeStr: string, dateStr: string, sourceTimezone: string): string => {
-    try {
-      // Create a date object with the time
-      const fullDateTimeStr = `${dateStr}T${timeStr}:00`
-      const date = parseISO(fullDateTimeStr)
-      
-      // Get timezone offset in milliseconds
-      const tzOffset = getTimezoneOffset(sourceTimezone, date)
-      
-      // Adjust the date by the timezone offset to get UTC
-      const utcDate = new Date(date.getTime() - tzOffset)
-      
-      // Format to ISO string without Z suffix
-      const isoString = utcDate.toISOString()
-      return isoString.substring(0, 19) // Remove milliseconds and Z suffix
-    } catch (error) {
-      console.error('Error converting time to UTC:', error)
-      // Fallback without Z suffix
-      return `${dateStr}T${timeStr}:00`
-    }
-  }
+  // Use the time utilities from our centralized module
+  const timeOptions = generateTimeOptions()
 
   // Get expert data from local storage and fetch availability data
   useEffect(() => {
@@ -643,13 +595,20 @@ export default function AvailabilityPage() {
                 // When timezone changes, we'll refetch availability data in the useEffect
               }}>
                 <SelectTrigger className="w-full border-mint/20 focus:border-mint-dark focus:ring-mint-dark">
-                  <SelectValue placeholder="Select your timezone" />
+                  <SelectValue placeholder="Select your timezone">
+                    {getTimezoneDisplayWithOffset(timezone)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {timezones.map((tz) => (
-                    <SelectItem key={tz.value} value={tz.value}>
-                      {tz.label}
-                    </SelectItem>
+                  {Object.entries(getTimezonesGroupedByRegion()).map(([region, tzList]) => (
+                    <div key={region}>
+                      <div className="px-2 py-1.5 text-sm font-semibold bg-gray-100">{region}</div>
+                      {tzList.map((tz) => (
+                        <SelectItem key={tz.id} value={tz.id}>
+                          {tz.displayName} {tz.offset ? `(UTC${tz.offset})` : ''}
+                        </SelectItem>
+                      ))}
+                    </div>
                   ))}
                 </SelectContent>
               </Select>

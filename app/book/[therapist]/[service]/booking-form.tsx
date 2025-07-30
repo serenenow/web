@@ -1,11 +1,24 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calendar, Clock, MapPin, ArrowLeft, Check, Globe, CreditCard } from "lucide-react"
+import { Calendar, Clock, MapPin, ArrowLeft, Globe, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useBooking } from "@/hooks/use-booking"
+import { useClientData } from "@/hooks/use-client-data"
+import { createBookingWithPayment, handleCashfreePayment, type ServiceDetailDto, type TimeSlot } from "@/lib/api/booking"
+import { 
+  convertTimeToTimezone, 
+  createTimeSlotFromString, 
+  formatTime12Hour, 
+  timezones,
+  legacyTimezones,
+  getBrowserTimezone, 
+  getClosestTimezone,
+  getTimezoneDisplayWithOffset,
+  getTimezonesGroupedByRegion
+} from "@/lib/utils/time-utils"
 
 interface BookingFormProps {
   expertId: string
@@ -28,16 +41,19 @@ interface AvailableSlots {
 
 export function BookingForm({ expertId, serviceId }: BookingFormProps) {
   const searchParams = useSearchParams()
-  const clientCode = searchParams.get("code")
-  const { fetchAvailableSlots, bookSession, processPayment, loading, error } = useBooking()
+  const router = useRouter()
+  const { fetchAvailableSlots, loading: bookingLoading, error } = useBooking()
+  const { clientData, isAuthenticated } = useClientData()
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [paymentMode, setPaymentMode] = useState<"online" | "direct">("online")
-  const [isBooked, setIsBooked] = useState(false)
   const [availableSlots, setAvailableSlots] = useState<AvailableSlots | null>(null)
   const [bookingData, setBookingData] = useState<any>(null)
   const [selectedServiceIndex, setSelectedServiceIndex] = useState<number>(0)
+  const [loading, setLoading] = useState(false)
+  const [bookingError, setBookingError] = useState<string | null>(null)
+  const [timezone, setTimezone] = useState(getBrowserTimezone() || "Asia/Kolkata")
 
   // Load booking data from sessionStorage
   useEffect(() => {
@@ -76,20 +92,20 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
   useEffect(() => {
     if (selectedDate) {
       // Track if the component is still mounted
-      let isMounted = true;
-      
+      let isMounted = true
+
       const loadTimeSlots = async () => {
         try {
-          console.log(`Fetching slots for date: ${selectedDate}`);
+          console.log(`Fetching slots for date: ${selectedDate}`)
           const slots = await fetchAvailableSlots(expertId, serviceId, selectedDate)
-          
+
           // Only update state if component is still mounted
           if (isMounted) {
             setAvailableSlots((prev: AvailableSlots | null) => ({
               ...prev,
               timeSlots: slots.timeSlots,
             }))
-            console.log(`Loaded ${slots.timeSlots.length} time slots for ${selectedDate}`);
+            console.log(`Loaded ${slots.timeSlots.length} time slots for ${selectedDate}`)
           }
         } catch (err) {
           console.error("Failed to load time slots:", err)
@@ -97,35 +113,83 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
       }
 
       loadTimeSlots()
-      
+
       // Cleanup function to prevent state updates after unmount
       return () => {
-        isMounted = false;
-      };
+        isMounted = false
+      }
     }
   }, [selectedDate, expertId, serviceId]) // Removed fetchAvailableSlots from dependencies
 
   const handleBooking = async () => {
-    if (!bookingData || !selectedDate || !selectedTime || !clientCode) return
+    if (!bookingData || !selectedDate || !selectedTime || !clientData?.id) return
+
+    setLoading(true)
+    setBookingError(null)
 
     try {
-      const booking = await bookSession({
-        clientCode,
+      const selectedService: ServiceDetailDto = bookingData.services[selectedServiceIndex]
+      
+      // Create time slot with proper ISO format using our utility
+      const timeSlot = createTimeSlotFromString(selectedTime, selectedDate, timezone, selectedService.durationMin)
+
+      // Create appointment using the API
+      const appointmentResponse = await createBookingWithPayment({
+        clientId: clientData.id, // Use client ID from centralized client data
         expertId,
-        serviceId: selectedService.id, // Use the selected service ID
+        serviceId: selectedService.id,
         date: selectedDate,
         time: selectedTime,
+        timezone, // Pass the selected timezone
+        timeSlot, // Pass the properly formatted time slot
         paymentMode,
+        serviceDetails: selectedService,
       })
 
-      if (paymentMode === "online" && booking.status === "pending_payment") {
-        // Process payment
-        // await processPayment(booking.bookingId)
-      }
+      if (paymentMode === "online") {
+        // Handle online payment with Cashfree
+        const paymentSuccess = await handleCashfreePayment(
+          appointmentResponse.paymentSessionId,
+          appointmentResponse.orderId,
+        )
 
-      setIsBooked(true)
+        if (paymentSuccess) {
+          // Store success data for the success page
+          const successData = {
+            orderId: appointmentResponse.orderId,
+            appointmentId: appointmentResponse.id,
+            paymentMethod: "online",
+            bookingDate: selectedDate,
+            bookingTime: selectedTime,
+            selectedService: selectedService,
+          }
+
+          sessionStorage.setItem("bookingSuccessData", JSON.stringify(successData))
+
+          // Redirect to success page
+          router.push(`/book/success?orderId=${appointmentResponse.orderId}&appointmentId=${appointmentResponse.id}`)
+        }
+      } else {
+        // Direct payment - show confirmation immediately
+        const successData = {
+          orderId: appointmentResponse.orderId,
+          appointmentId: appointmentResponse.id,
+          paymentMethod: "direct",
+          bookingDate: selectedDate,
+          bookingTime: selectedTime,
+          selectedService: selectedService,
+        }
+
+        sessionStorage.setItem("bookingSuccessData", JSON.stringify(successData))
+
+        // Redirect to success page
+        router.push(`/book/success?orderId=${appointmentResponse.orderId}&appointmentId=${appointmentResponse.id}`)
+      }
     } catch (err) {
       console.error("Booking failed:", err)
+      setBookingError(err instanceof Error ? err.message : "Booking failed. Please try again.")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -150,58 +214,18 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
       </div>
     )
   }
-  
+
   const expert = bookingData.expert
-  
+
   // Use the selected service index from state
   const selectedService = bookingData.services[selectedServiceIndex]
   console.log("Selected service:", selectedService)
-  
+
   const client = bookingData.clientResponse?.client
-  
+
   const platformFee = Math.round(selectedService.price * 0.035)
   const taxes = Math.round(selectedService.price * 0.18)
   const total = selectedService.price + platformFee + taxes
-
-  if (isBooked) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light">
-        <div className="container mx-auto px-6 py-12">
-          <div className="max-w-2xl mx-auto">
-            <Card className="border-mint/20 shadow-lg">
-              <CardContent className="p-12 text-center">
-                <div className="w-16 h-16 bg-mint-dark rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Check className="h-8 w-8 text-white" />
-                </div>
-                <h1 className="text-3xl font-bold text-charcoal mb-4">Booking Confirmed!</h1>
-                <p className="text-lg text-charcoal/70 mb-6">
-                  Thanks! You'll receive an email with your session details.
-                </p>
-                <div className="bg-mint/10 p-6 rounded-lg mb-6">
-                  <h3 className="font-semibold text-charcoal mb-2">Session Details</h3>
-                  <p className="text-charcoal/80">
-                    {selectedService.title} with {expert.name}
-                  </p>
-                  <p className="text-charcoal/80">
-                    {selectedDate} at {selectedTime}
-                  </p>
-                  <p className="text-charcoal/70">{selectedService.location}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  className="mt-6 border-mint-dark text-mint-dark hover:bg-mint-dark hover:text-white bg-transparent"
-                  onClick={() => window.history.back()}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to SereneNow
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light">
@@ -233,7 +257,7 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                     <span className="font-medium">Email:</span> {client.email}
                   </p>
                   <p>
-                    <span className="font-medium">Code:</span> {clientCode}
+                    <span className="font-medium">Client ID:</span> {clientData?.id}
                   </p>
                 </div>
               </CardContent>
@@ -264,17 +288,17 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                     <select
                       id="service-select"
                       value={selectedServiceIndex}
-                      onChange={(e) => setSelectedServiceIndex(parseInt(e.target.value))}
+                      onChange={(e) => setSelectedServiceIndex(Number.parseInt(e.target.value))}
                       className="w-full border border-mint/20 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-mint-dark"
                     >
                       {bookingData.services.map((service: any, index: number) => (
                         <option key={service.id} value={index}>
-                          {service.title} - ${service.price}
+                          {service.title} - ₹{service.price}
                         </option>
                       ))}
                     </select>
                   </div>
-                  
+
                   <div className="flex items-center space-x-4 text-sm text-charcoal/70">
                     <div className="flex items-center space-x-1">
                       <Clock className="h-4 w-4" />
@@ -305,9 +329,9 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                     <div>
                       <p className="font-medium text-charcoal">Date & Time</p>
                       <p className="text-charcoal/70">
-                        {selectedDate} at {selectedTime}
+                        {selectedDate} at {selectedTime && (selectedTime.includes('AM') || selectedTime.includes('PM')) ? selectedTime : formatTime12Hour(selectedTime || '')}
                       </p>
-                      <p className="text-charcoal/70">India (IST)</p>
+                      <p className="text-charcoal/70">{getTimezoneDisplayWithOffset(timezone)}</p>
                     </div>
 
                     <div>
@@ -332,8 +356,16 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                     <Globe className="h-5 w-5 text-mint-dark" />
                     <span className="font-medium text-charcoal">Timezone</span>
                   </div>
-                  <select className="border border-mint/20 rounded-md px-3 py-2 bg-white">
-                    <option>India (IST)</option>
+                  <select 
+                    className="border border-mint/20 rounded-md px-3 py-2 bg-white"
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                  >
+                    {timezones.map((tz) => (
+                      <option key={tz.id} value={tz.id}>
+                        {tz.displayName} {tz.offset ? `(UTC${tz.offset})` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </CardContent>
@@ -347,7 +379,7 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                   <h3 className="text-lg font-semibold text-charcoal">Select a Date</h3>
                 </div>
 
-                {loading && <p className="text-charcoal/70">Loading available dates...</p>}
+                {bookingLoading && <p className="text-charcoal/70">Loading available dates...</p>}
 
                 {availableSlots?.dates && (
                   <div className="grid grid-cols-4 gap-3">
@@ -379,10 +411,10 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-2 mb-4">
                     <Clock className="h-5 w-5 text-mint-dark" />
-                    <h3 className="text-lg font-semibold text-charcoal">Available Times (India (IST))</h3>
+                    <h3 className="text-lg font-semibold text-charcoal">Available Times ({getTimezoneDisplayWithOffset(timezone)})</h3>
                   </div>
 
-                  {loading && <p className="text-charcoal/70">Loading available times...</p>}
+                  {bookingLoading && <p className="text-charcoal/70">Loading available times...</p>}
 
                   {availableSlots?.timeSlots && (
                     <div className="grid grid-cols-3 gap-3">
@@ -399,7 +431,7 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                                 : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
                           }`}
                         >
-                          {timeSlot.time}
+                          {timeSlot.time.includes('AM') || timeSlot.time.includes('PM') ? timeSlot.time : formatTime12Hour(timeSlot.time)}
                         </button>
                       ))}
                     </div>
@@ -427,7 +459,7 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                       }`}
                     >
                       <div className="font-medium text-charcoal">Pay Online</div>
-                      <div className="text-sm text-charcoal/70">Secure payment via Razorpay</div>
+                      <div className="text-sm text-charcoal/70">Secure payment via Cashfree</div>
                     </button>
 
                     <button
@@ -457,7 +489,7 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                         <span>₹{selectedService.price}</span>
                       </div>
                       <div className="flex justify-between text-charcoal/70">
-                        <span>Platform Fee (3%)</span>
+                        <span>Platform Fee (3.5%)</span>
                         <span>₹{platformFee}</span>
                       </div>
                       <div className="flex justify-between text-charcoal/70">
@@ -497,10 +529,10 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
             )}
 
             {/* Error Display */}
-            {error && (
+            {(error || bookingError) && (
               <Card className="border-red-200 shadow-sm">
                 <CardContent className="p-6">
-                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">{error}</div>
+                  <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">{bookingError || error}</div>
                 </CardContent>
               </Card>
             )}

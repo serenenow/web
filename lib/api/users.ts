@@ -58,16 +58,7 @@ export interface ClientDto {
   phoneNumber: string
 }
 
-export interface ExpertAppointment {
-  id: string
-  startTime: string
-  endTime: string
-  client: ClientDto
-  service: ServiceDto
-  location: string
-  status: string
-  notes?: string
-}
+// ExpertAppointment interface moved to appointments.ts
 
 export interface ExpertResponse {
   accessToken: string

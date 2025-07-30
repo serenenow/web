@@ -1,68 +1,75 @@
 "use client"
 
-import { useState } from "react"
-import { Calendar, Clock, ExternalLink, Filter, Plus } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Calendar, Clock, ExternalLink, Filter, Plus, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
+import { fetchUpcomingAppointments, ExpertAppointment } from "@/lib/api/appointments"
+import { getExpertData } from "@/lib/api/auth"
+import { format, parseISO } from "date-fns"
 
 export default function AppointmentsPage() {
-  const [user] = useState({
-    name: "Dr. Sarah Johnson",
-    email: "sarah@example.com",
+  const [user, setUser] = useState({
+    name: "",
+    email: "",
   })
 
   const [filter, setFilter] = useState("all")
-  const [appointments] = useState([
-    {
-      id: "1",
-      client: "John Doe",
-      service: "Individual Therapy",
-      date: "Dec 3, 2024",
-      time: "2:00 PM - 2:50 PM",
-      status: "confirmed",
-      paymentStatus: "paid",
-      meetingLink: "https://meet.google.com/abc-def-ghi",
-      notes: "Follow-up on anxiety management techniques",
-    },
-    {
-      id: "2",
-      client: "Sarah Miller",
-      service: "Couples Counseling",
-      date: "Dec 4, 2024",
-      time: "10:00 AM - 11:00 AM",
-      status: "confirmed",
-      paymentStatus: "pending",
-      meetingLink: "https://meet.google.com/xyz-uvw-rst",
-      notes: "Communication patterns discussion",
-    },
-    {
-      id: "3",
-      client: "Mike Rodriguez",
-      service: "Individual Therapy",
-      date: "Dec 5, 2024",
-      time: "3:00 PM - 3:50 PM",
-      status: "pending",
-      paymentStatus: "unpaid",
-      meetingLink: null,
-      notes: "",
-    },
-    {
-      id: "4",
-      client: "Emma Wilson",
-      service: "Individual Therapy",
-      date: "Nov 30, 2024",
-      time: "1:00 PM - 1:50 PM",
-      status: "completed",
-      paymentStatus: "paid",
-      meetingLink: null,
-      notes: "Discussed coping strategies for work stress",
-    },
-  ])
+  const [appointments, setAppointments] = useState<ExpertAppointment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  useEffect(() => {
+    // Get expert data from local storage
+    const expertData = getExpertData()
+    if (expertData) {
+      setUser({
+        name: expertData.name,
+        email: expertData.email
+      })
+    }
+    
+    // Fetch appointments
+    const loadAppointments = async () => {
+      try {
+        setLoading(true)
+        const data = await fetchUpcomingAppointments()
+        setAppointments(data)
+        setError(null)
+      } catch (err) {
+        console.error('Error fetching appointments:', err)
+        setError('Failed to load appointments. Please try again.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    loadAppointments()
+  }, [])
 
-  const filteredAppointments = appointments.filter((appointment) => {
+  // Format appointment data for display
+  const formattedAppointments = appointments.map(appointment => {
+    const startDate = parseISO(appointment.startTime)
+    const endDate = parseISO(appointment.endTime)
+    
+    return {
+      id: appointment.id,
+      client: appointment.client.name,
+      service: appointment.service.title,
+      date: format(startDate, 'MMM d, yyyy'),
+      time: `${format(startDate, 'h:mm a')} - ${format(endDate, 'h:mm a')}`,
+      status: appointment.status.toLowerCase(),
+      // Payment status would come from the API, defaulting to 'pending' for now
+      paymentStatus: 'pending',
+      meetingLink: appointment.meetingLink || null,
+      notes: appointment.notes || '',
+    }
+  })
+
+  const filteredAppointments = formattedAppointments.filter((appointment) => {
     if (filter === "all") return true
     return appointment.status === filter
   })
@@ -134,81 +141,111 @@ export default function AppointmentsPage() {
             </CardContent>
           </Card>
 
-          {/* Appointments List */}
-          <div className="grid gap-4">
-            {filteredAppointments.map((appointment) => (
-              <Card key={appointment.id} className="border-mint/20">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-semibold text-charcoal">{appointment.client}</h3>
-                        <Badge variant="secondary" className={getStatusColor(appointment.status)}>
-                          {appointment.status}
-                        </Badge>
-                        <Badge variant="secondary" className={getPaymentStatusColor(appointment.paymentStatus)}>
-                          {appointment.paymentStatus}
-                        </Badge>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-charcoal/60 mb-3">
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          {appointment.date}
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-2" />
-                          {appointment.time}
-                        </div>
-                        <div>Service: {appointment.service}</div>
-                      </div>
-
-                      {appointment.notes && (
-                        <p className="text-sm text-charcoal/70 bg-mint/5 p-3 rounded-lg">
-                          <strong>Notes:</strong> {appointment.notes}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col space-y-2 ml-4">
-                      {appointment.meetingLink && (
-                        <Button size="sm" variant="outline" className="border-mint/30 hover:bg-mint/10 bg-transparent">
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          Join Meeting
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" className="hover:bg-mint/10">
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {filteredAppointments.length === 0 && (
+          {/* Loading State */}
+          {loading && (
             <Card className="border-mint/20">
               <CardContent className="p-12 text-center">
                 <div className="w-16 h-16 bg-mint/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="h-8 w-8 text-mint-dark" />
+                  <Loader2 className="h-8 w-8 text-mint-dark animate-spin" />
                 </div>
-                <h3 className="text-lg font-semibold text-charcoal mb-2">
-                  {filter === "all" ? "No appointments yet" : `No ${filter} appointments`}
-                </h3>
-                <p className="text-charcoal/60 mb-4">
-                  {filter === "all"
-                    ? "Schedule your first appointment to get started"
-                    : "Try changing the filter to see other appointments"}
-                </p>
-                {filter === "all" && (
-                  <Button className="bg-mint-dark hover:bg-mint-dark/90 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Schedule First Appointment
-                  </Button>
-                )}
+                <h3 className="text-lg font-semibold text-charcoal mb-2">Loading appointments...</h3>
               </CardContent>
             </Card>
+          )}
+
+          {/* Error State */}
+          {!loading && error && (
+            <Card className="border-mint/20 border-red-300">
+              <CardContent className="p-12 text-center">
+                <h3 className="text-lg font-semibold text-red-600 mb-2">Error</h3>
+                <p className="text-charcoal/60 mb-4">{error}</p>
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  className="bg-mint-dark hover:bg-mint-dark/90 text-white"
+                >
+                  Try Again
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Appointments List */}
+          {!loading && !error && (
+            <div className="grid gap-4">
+              {filteredAppointments.map((appointment) => (
+                <Card key={appointment.id} className="border-mint/20">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="text-lg font-semibold text-charcoal">{appointment.client}</h3>
+                          <Badge variant="secondary" className={getStatusColor(appointment.status)}>
+                            {appointment.status}
+                          </Badge>
+                          <Badge variant="secondary" className={getPaymentStatusColor(appointment.paymentStatus)}>
+                            {appointment.paymentStatus}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-charcoal/60 mb-3">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            {appointment.date}
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 mr-2" />
+                            {appointment.time}
+                          </div>
+                          <div>Service: {appointment.service}</div>
+                        </div>
+
+                        {appointment.notes && (
+                          <p className="text-sm text-charcoal/70 bg-mint/5 p-3 rounded-lg">
+                            <strong>Notes:</strong> {appointment.notes}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col space-y-2 ml-4">
+                        {appointment.meetingLink && (
+                          <Button size="sm" variant="outline" className="border-mint/30 hover:bg-mint/10 bg-transparent">
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Join Meeting
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="hover:bg-mint/10">
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {filteredAppointments.length === 0 && (
+                <Card className="border-mint/20">
+                  <CardContent className="p-12 text-center">
+                    <div className="w-16 h-16 bg-mint/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="h-8 w-8 text-mint-dark" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-charcoal mb-2">
+                      {filter === "all" ? "No appointments yet" : `No ${filter} appointments`}
+                    </h3>
+                    <p className="text-charcoal/60 mb-4">
+                      {filter === "all"
+                        ? "Schedule your first appointment to get started"
+                        : "Try changing the filter to see other appointments"}
+                    </p>
+                    {filter === "all" && (
+                      <Button className="bg-mint-dark hover:bg-mint-dark/90 text-white">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Schedule First Appointment
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
         </div>
       </main>
