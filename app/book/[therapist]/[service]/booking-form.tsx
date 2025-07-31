@@ -156,7 +156,7 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
     if (originalTimeSlots.length > 0) {
       const convertedSlots = originalTimeSlots.map((slot) => ({
         ...slot,
-        time: convertTimeToCurrentTimezone(slot.originalTime || slot.time, slot.timezone),
+        time: convertTimeToCurrentTimezone(slot.time, slot.timezone),
       }))
 
       setAvailableSlots((prev: AvailableSlots | null) => ({

@@ -207,7 +207,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
     if (originalTimeSlots.length > 0) {
       const convertedSlots = originalTimeSlots.map((slot) => ({
         ...slot,
-        time: convertTimeToCurrentTimezone(slot.originalTime || slot.time, slot.timezone),
+        time: convertTimeToCurrentTimezone(slot.time, slot.timezone),
       }))
 
       setAvailableTimeSlots(convertedSlots)
