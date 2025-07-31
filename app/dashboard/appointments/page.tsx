@@ -7,7 +7,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import { fetchUpcomingAppointments, ExpertAppointment } from "@/lib/api/appointments"
+import {
+  fetchUpcomingAppointments,
+  approveAppointment,
+  declineAppointment,
+  type ExpertAppointment,
+} from "@/lib/api/appointments"
 import { getExpertData } from "@/lib/api/auth"
 import { format, parseISO } from "date-fns"
 
@@ -21,17 +26,39 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<ExpertAppointment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
+  const handleApprove = async (appointmentId: string) => {
+    try {
+      await approveAppointment(appointmentId)
+      // Refresh appointments
+      const data = await fetchUpcomingAppointments()
+      setAppointments(data)
+    } catch (error) {
+      console.error("Error approving appointment:", error)
+    }
+  }
+
+  const handleDecline = async (appointmentId: string) => {
+    try {
+      await declineAppointment(appointmentId)
+      // Refresh appointments
+      const data = await fetchUpcomingAppointments()
+      setAppointments(data)
+    } catch (error) {
+      console.error("Error declining appointment:", error)
+    }
+  }
+
   useEffect(() => {
     // Get expert data from local storage
     const expertData = getExpertData()
     if (expertData) {
       setUser({
         name: expertData.name,
-        email: expertData.email
+        email: expertData.email,
       })
     }
-    
+
     // Fetch appointments
     const loadAppointments = async () => {
       try {
@@ -40,32 +67,30 @@ export default function AppointmentsPage() {
         setAppointments(data)
         setError(null)
       } catch (err) {
-        console.error('Error fetching appointments:', err)
-        setError('Failed to load appointments. Please try again.')
+        console.error("Error fetching appointments:", err)
+        setError("Failed to load appointments. Please try again.")
       } finally {
         setLoading(false)
       }
     }
-    
+
     loadAppointments()
   }, [])
 
   // Format appointment data for display
-  const formattedAppointments = appointments.map(appointment => {
+  const formattedAppointments = appointments.map((appointment) => {
     const startDate = parseISO(appointment.startTime)
     const endDate = parseISO(appointment.endTime)
-    
+
     return {
       id: appointment.id,
       client: appointment.client.name,
       service: appointment.service.title,
-      date: format(startDate, 'MMM d, yyyy'),
-      time: `${format(startDate, 'h:mm a')} - ${format(endDate, 'h:mm a')}`,
-      status: appointment.status.toLowerCase(),
-      // Payment status would come from the API, defaulting to 'pending' for now
-      paymentStatus: 'pending',
+      date: format(startDate, "MMM d, yyyy"),
+      time: `${format(startDate, "h:mm a")} - ${format(endDate, "h:mm a")}`,
+      status: appointment.status.toLowerCase() === "pending" ? "needs_approval" : appointment.status.toLowerCase(),
       meetingLink: appointment.meetingLink || null,
-      notes: appointment.notes || '',
+      notes: appointment.notes || "",
     }
   })
 
@@ -78,25 +103,8 @@ export default function AppointmentsPage() {
     switch (status) {
       case "confirmed":
         return "bg-mint/20 text-mint-dark"
-      case "pending":
+      case "needs_approval":
         return "bg-yellow-100 text-yellow-800"
-      case "completed":
-        return "bg-green-100 text-green-800"
-      case "cancelled":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-600"
-    }
-  }
-
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case "paid":
-        return "bg-green-100 text-green-800"
-      case "pending":
-        return "bg-yellow-100 text-yellow-800"
-      case "unpaid":
-        return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-600"
     }
@@ -131,10 +139,8 @@ export default function AppointmentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Appointments</SelectItem>
+                    <SelectItem value="needs_approval">Needs Approval</SelectItem>
                     <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -159,8 +165,8 @@ export default function AppointmentsPage() {
               <CardContent className="p-12 text-center">
                 <h3 className="text-lg font-semibold text-red-600 mb-2">Error</h3>
                 <p className="text-charcoal/60 mb-4">{error}</p>
-                <Button 
-                  onClick={() => window.location.reload()} 
+                <Button
+                  onClick={() => window.location.reload()}
                   className="bg-mint-dark hover:bg-mint-dark/90 text-white"
                 >
                   Try Again
@@ -180,10 +186,7 @@ export default function AppointmentsPage() {
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-lg font-semibold text-charcoal">{appointment.client}</h3>
                           <Badge variant="secondary" className={getStatusColor(appointment.status)}>
-                            {appointment.status}
-                          </Badge>
-                          <Badge variant="secondary" className={getPaymentStatusColor(appointment.paymentStatus)}>
-                            {appointment.paymentStatus}
+                            {appointment.status === "needs_approval" ? "Needs Approval" : appointment.status}
                           </Badge>
                         </div>
 
@@ -207,15 +210,38 @@ export default function AppointmentsPage() {
                       </div>
 
                       <div className="flex flex-col space-y-2 ml-4">
-                        {appointment.meetingLink && (
-                          <Button size="sm" variant="outline" className="border-mint/30 hover:bg-mint/10 bg-transparent">
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            Join Meeting
-                          </Button>
+                        {appointment.status === "needs_approval" ? (
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              className="bg-mint-dark hover:bg-mint-dark/90 text-white"
+                              onClick={() => handleApprove(appointment.id)}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 text-red-600 hover:bg-red-50 bg-transparent"
+                              onClick={() => handleDecline(appointment.id)}
+                            >
+                              Decline
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            {appointment.meetingLink && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-mint/30 hover:bg-mint/10 bg-transparent"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                Join Meeting
+                              </Button>
+                            )}
+                          </>
                         )}
-                        <Button size="sm" variant="ghost" className="hover:bg-mint/10">
-                          Edit
-                        </Button>
                       </div>
                     </div>
                   </CardContent>

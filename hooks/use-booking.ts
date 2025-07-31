@@ -4,13 +4,14 @@ import { useState, useRef } from "react"
 import {
   validateClientCode,
   getAvailableSlots,
-  createBooking,
-  initiateCashfreePayment,
   registerClient,
+  createBookingWithPayment,
+  handleCashfreePayment,
   type VerifyCodeResponse,
   type WebClientRegisterRequest,
   type FormattedAvailableSlots,
 } from "@/lib/api/booking"
+import { getBrowserTimezone } from "@/lib/utils/time-utils"
 import { updateClientProfile, type ClientUpdateRequest } from "@/lib/api/client"
 
 export function useBooking() {
@@ -88,9 +89,9 @@ export function useBooking() {
   // Cache for available slots to prevent redundant API calls
   const slotsCache = useRef<Record<string, FormattedAvailableSlots>>({});
   
-  const fetchAvailableSlots = async (expertId: string, serviceId: string, date?: string) => {
-    // Create a cache key based on the parameters
-    const cacheKey = `${expertId}_${serviceId}_${date || 'all'}`;
+  const fetchAvailableSlots = async (expertId: string, serviceId: string, date?: string, timezone?: string) => {
+    // Create a cache key based on the parameters including timezone
+    const cacheKey = `${expertId}_${serviceId}_${date || 'all'}_${timezone || getBrowserTimezone()}`;
     
     // Check if we have cached results
     if (slotsCache.current[cacheKey]) {
@@ -132,7 +133,33 @@ export function useBooking() {
     setLoading(true)
     setError(null)
     try {
-      const result = await createBooking(bookingData)
+      const result = await createBookingWithPayment({
+        clientId: bookingData.clientCode,
+        expertId: bookingData.expertId,
+        serviceId: bookingData.serviceId,
+        date: bookingData.date,
+        time: bookingData.time,
+        paymentMode: bookingData.paymentMode,
+        timezone: getBrowserTimezone(),
+        serviceDetails: { 
+          id: '', 
+          title: '', 
+          description: '', 
+          price: 0, 
+          location: '', 
+          platformFees: 0,
+          totalTaxes: 0,
+          total: 0,
+          durationMin: 60,
+          bufferMin: 0,
+          cancellationDeadlineHours: 24,
+          cancellationPercent: 0,
+          rescheduleDeadlineHours: 24,
+          reschedulePercent: 0,
+          useCustomAvailability: false,
+          minHoursNotice: 24
+        } // This is required but will be populated from the server
+      })
       return result
     } catch (err: any) {
       setError(err.message || "Failed to create booking")
@@ -156,7 +183,7 @@ export function useBooking() {
       // For online payments, initiate Cashfree payment flow
       if (bookingResult.status === "pending_payment" && bookingResult.paymentSessionId) {
         // Initialize Cashfree payment
-        await initiateCashfreePayment(bookingResult.paymentSessionId)
+        await handleCashfreePayment(bookingResult.paymentSessionId, bookingResult.orderId)
         return true
       } else if (bookingResult.status === "confirmed") {
         // For direct payments, no payment processing needed

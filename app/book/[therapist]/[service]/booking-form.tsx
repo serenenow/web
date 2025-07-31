@@ -1,24 +1,22 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calendar, Clock, MapPin, ArrowLeft, Globe, CreditCard } from "lucide-react"
+import { Calendar, Clock, MapPin, ArrowLeft, Globe, CreditCard, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useBooking } from "@/hooks/use-booking"
 import { useClientData } from "@/hooks/use-client-data"
-import { createBookingWithPayment, handleCashfreePayment, type ServiceDetailDto, type TimeSlot } from "@/lib/api/booking"
-import { 
-  convertTimeToTimezone, 
-  createTimeSlotFromString, 
-  formatTime12Hour, 
+import type { ServiceDetailDto } from "@/lib/api/booking"
+import {
+  convertTimeToTimezone,
+  formatTime12Hour,
   timezones,
-  legacyTimezones,
-  getBrowserTimezone, 
-  getClosestTimezone,
+  getBrowserTimezone,
   getTimezoneDisplayWithOffset,
-  getTimezonesGroupedByRegion
+  formatDate,
 } from "@/lib/utils/time-utils"
+import { processAuthenticatedBooking } from "@/lib/services/booking-service"
 
 interface BookingFormProps {
   expertId: string
@@ -36,6 +34,7 @@ interface AvailableSlots {
     time: string
     available: boolean
     timezone: string
+    originalTime?: string // Store original time for timezone conversion
   }>
 }
 
@@ -49,11 +48,15 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [paymentMode, setPaymentMode] = useState<"online" | "direct">("online")
   const [availableSlots, setAvailableSlots] = useState<AvailableSlots | null>(null)
+  const [originalTimeSlots, setOriginalTimeSlots] = useState<
+    Array<{ time: string; available: boolean; timezone: string }>
+  >([])
   const [bookingData, setBookingData] = useState<any>(null)
   const [selectedServiceIndex, setSelectedServiceIndex] = useState<number>(0)
   const [loading, setLoading] = useState(false)
   const [bookingError, setBookingError] = useState<string | null>(null)
   const [timezone, setTimezone] = useState(getBrowserTimezone() || "Asia/Kolkata")
+  const [currentMonth, setCurrentMonth] = useState(new Date())
 
   // Load booking data from sessionStorage
   useEffect(() => {
@@ -67,26 +70,39 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
     }
   }, [])
 
-  // Initialize available dates without making an API call
-  useEffect(() => {
-    // Generate dates for the next 7 days
+  // Generate dates for current month view (up to 6 months in future)
+  const generateDatesForMonth = (month: Date) => {
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     const dates = []
+    const today = new Date()
+    const maxDate = new Date()
+    maxDate.setMonth(maxDate.getMonth() + 6) // 6 months in future
 
-    for (let i = 0; i < 7; i++) {
-      const date = new Date()
-      date.setDate(date.getDate() + i)
+    // Get first day of the month and last day
+    const firstDay = new Date(month.getFullYear(), month.getMonth(), 1)
+    const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0)
 
-      dates.push({
-        date: date.toISOString().split("T")[0], // YYYY-MM-DD
-        day: days[date.getDay()],
-        dayNum: date.getDate().toString(),
-        available: true, // Assume all dates are available
-      })
+    // Generate dates for the month
+    for (let date = new Date(firstDay); date <= lastDay; date.setDate(date.getDate() + 1)) {
+      // Only include dates from today onwards and within 6 months
+      if (date >= today && date <= maxDate) {
+        dates.push({
+          date: date.toISOString().split("T")[0], // YYYY-MM-DD
+          day: days[date.getDay()],
+          dayNum: date.getDate().toString(),
+          available: true, // Assume all dates are available
+        })
+      }
     }
 
+    return dates
+  }
+
+  // Initialize available dates for current month
+  useEffect(() => {
+    const dates = generateDatesForMonth(currentMonth)
     setAvailableSlots({ dates, timeSlots: [] })
-  }, [])
+  }, [currentMonth])
 
   // Fetch time slots when date is selected
   useEffect(() => {
@@ -101,11 +117,25 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
 
           // Only update state if component is still mounted
           if (isMounted) {
+            // Store original time slots for timezone conversion
+            const originalSlots = slots.timeSlots.map((slot) => ({
+              ...slot,
+              originalTime: slot.time, // Store original time
+            }))
+
+            setOriginalTimeSlots(originalSlots)
+
+            // Convert time slots to current timezone
+            const convertedSlots = originalSlots.map((slot) => ({
+              ...slot,
+              time: convertTimeToCurrentTimezone(slot.time, slot.timezone),
+            }))
+
             setAvailableSlots((prev: AvailableSlots | null) => ({
               ...prev,
-              timeSlots: slots.timeSlots,
+              timeSlots: convertedSlots,
             }))
-            console.log(`Loaded ${slots.timeSlots.length} time slots for ${selectedDate}`)
+            console.log(`Loaded ${convertedSlots.length} time slots for ${selectedDate}`)
           }
         } catch (err) {
           console.error("Failed to load time slots:", err)
@@ -119,7 +149,45 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
         isMounted = false
       }
     }
-  }, [selectedDate, expertId, serviceId]) // Removed fetchAvailableSlots from dependencies
+  }, [selectedDate, expertId, serviceId])
+
+  // Convert time slots when timezone changes (without API call)
+  useEffect(() => {
+    if (originalTimeSlots.length > 0) {
+      const convertedSlots = originalTimeSlots.map((slot) => ({
+        ...slot,
+        time: convertTimeToCurrentTimezone(slot.originalTime || slot.time, slot.timezone),
+      }))
+
+      setAvailableSlots((prev: AvailableSlots | null) => ({
+        ...prev,
+        timeSlots: convertedSlots,
+      }))
+
+      // Reset selected time when timezone changes
+      setSelectedTime(null)
+    }
+  }, [timezone, originalTimeSlots])
+
+  // Helper function to convert time to current timezone
+  const convertTimeToCurrentTimezone = (timeString: string, sourceTimezone: string) => {
+    try {
+      // If time already includes AM/PM, return as is
+      if (timeString.includes("AM") || timeString.includes("PM")) {
+        return timeString
+      }
+
+      // Create a date object for today with the given time
+      const today = new Date().toISOString().split("T")[0]
+      const isoString = `${today}T${timeString}:00`
+
+      // Convert from source timezone to target timezone
+      return convertTimeToTimezone(isoString, timezone)
+    } catch (error) {
+      console.error("Error converting time to timezone:", error)
+      return timeString
+    }
+  }
 
   const handleBooking = async () => {
     if (!bookingData || !selectedDate || !selectedTime || !clientData?.id) return
@@ -129,61 +197,22 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
 
     try {
       const selectedService: ServiceDetailDto = bookingData.services[selectedServiceIndex]
-      
-      // Create time slot with proper ISO format using our utility
-      const timeSlot = createTimeSlotFromString(selectedTime, selectedDate, timezone, selectedService.durationMin)
 
-      // Create appointment using the API
-      const appointmentResponse = await createBookingWithPayment({
-        clientId: clientData.id, // Use client ID from centralized client data
+      const result = await processAuthenticatedBooking({
+        clientId: clientData.id,
         expertId,
         serviceId: selectedService.id,
+        selectedService,
         date: selectedDate,
         time: selectedTime,
-        timezone, // Pass the selected timezone
-        timeSlot, // Pass the properly formatted time slot
+        timezone,
         paymentMode,
-        serviceDetails: selectedService,
       })
 
-      if (paymentMode === "online") {
-        // Handle online payment with Cashfree
-        const paymentSuccess = await handleCashfreePayment(
-          appointmentResponse.paymentSessionId,
-          appointmentResponse.orderId,
-        )
-
-        if (paymentSuccess) {
-          // Store success data for the success page
-          const successData = {
-            orderId: appointmentResponse.orderId,
-            appointmentId: appointmentResponse.id,
-            paymentMethod: "online",
-            bookingDate: selectedDate,
-            bookingTime: selectedTime,
-            selectedService: selectedService,
-          }
-
-          sessionStorage.setItem("bookingSuccessData", JSON.stringify(successData))
-
-          // Redirect to success page
-          router.push(`/book/success?orderId=${appointmentResponse.orderId}&appointmentId=${appointmentResponse.id}`)
-        }
+      if (result.success) {
+        router.push(`/book/success?orderId=${result.orderId}&appointmentId=${result.appointmentId}`)
       } else {
-        // Direct payment - show confirmation immediately
-        const successData = {
-          orderId: appointmentResponse.orderId,
-          appointmentId: appointmentResponse.id,
-          paymentMethod: "direct",
-          bookingDate: selectedDate,
-          bookingTime: selectedTime,
-          selectedService: selectedService,
-        }
-
-        sessionStorage.setItem("bookingSuccessData", JSON.stringify(successData))
-
-        // Redirect to success page
-        router.push(`/book/success?orderId=${appointmentResponse.orderId}&appointmentId=${appointmentResponse.id}`)
+        setBookingError(result.error || "Booking failed")
       }
     } catch (err) {
       console.error("Booking failed:", err)
@@ -191,6 +220,40 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePreviousMonth = () => {
+    const newMonth = new Date(currentMonth)
+    newMonth.setMonth(newMonth.getMonth() - 1)
+
+    // Don't go before current month
+    const today = new Date()
+    if (newMonth.getMonth() >= today.getMonth() && newMonth.getFullYear() >= today.getFullYear()) {
+      setCurrentMonth(newMonth)
+    }
+  }
+
+  const handleNextMonth = () => {
+    const newMonth = new Date(currentMonth)
+    newMonth.setMonth(newMonth.getMonth() + 1)
+
+    // Don't go beyond 6 months in future
+    const maxMonth = new Date()
+    maxMonth.setMonth(maxMonth.getMonth() + 6)
+    if (newMonth <= maxMonth) {
+      setCurrentMonth(newMonth)
+    }
+  }
+
+  const canGoPrevious = () => {
+    const today = new Date()
+    return currentMonth.getMonth() > today.getMonth() || currentMonth.getFullYear() > today.getFullYear()
+  }
+
+  const canGoNext = () => {
+    const maxMonth = new Date()
+    maxMonth.setMonth(maxMonth.getMonth() + 6)
+    return currentMonth < maxMonth
   }
 
   if (!bookingData) {
@@ -329,7 +392,10 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                     <div>
                       <p className="font-medium text-charcoal">Date & Time</p>
                       <p className="text-charcoal/70">
-                        {selectedDate} at {selectedTime && (selectedTime.includes('AM') || selectedTime.includes('PM')) ? selectedTime : formatTime12Hour(selectedTime || '')}
+                        {formatDate(selectedDate)} at{" "}
+                        {selectedTime && (selectedTime.includes("AM") || selectedTime.includes("PM"))
+                          ? selectedTime
+                          : formatTime12Hour(selectedTime || "")}
                       </p>
                       <p className="text-charcoal/70">{getTimezoneDisplayWithOffset(timezone)}</p>
                     </div>
@@ -356,14 +422,14 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                     <Globe className="h-5 w-5 text-mint-dark" />
                     <span className="font-medium text-charcoal">Timezone</span>
                   </div>
-                  <select 
+                  <select
                     className="border border-mint/20 rounded-md px-3 py-2 bg-white"
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
                   >
                     {timezones.map((tz) => (
                       <option key={tz.id} value={tz.id}>
-                        {tz.displayName} {tz.offset ? `(UTC${tz.offset})` : ''}
+                        {tz.displayName} {tz.offset ? `(UTC${tz.offset})` : ""}
                       </option>
                     ))}
                   </select>
@@ -374,21 +440,36 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
             {/* Date Selection */}
             <Card className="border-mint/20 shadow-sm">
               <CardContent className="p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Calendar className="h-5 w-5 text-mint-dark" />
-                  <h3 className="text-lg font-semibold text-charcoal">Select a Date</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-5 w-5 text-mint-dark" />
+                    <h3 className="text-lg font-semibold text-charcoal">Select a Date</h3>
+                  </div>
+
+                  {/* Month Navigation */}
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm" onClick={handlePreviousMonth} disabled={!canGoPrevious()}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium min-w-[120px] text-center">
+                      {formatDate(currentMonth.toISOString().split("T")[0], "MMMM yyyy")}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={handleNextMonth} disabled={!canGoNext()}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {bookingLoading && <p className="text-charcoal/70">Loading available dates...</p>}
 
                 {availableSlots?.dates && (
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-7 gap-2">
                     {availableSlots.dates.map((dateObj) => (
                       <button
                         key={dateObj.date}
                         onClick={() => setSelectedDate(dateObj.date)}
                         disabled={!dateObj.available}
-                        className={`p-4 rounded-lg border text-center transition-colors ${
+                        className={`p-3 rounded-lg border text-center transition-colors ${
                           selectedDate === dateObj.date
                             ? "border-mint-dark bg-mint-dark text-white"
                             : dateObj.available
@@ -396,8 +477,8 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                               : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
                         }`}
                       >
-                        <div className="text-sm text-gray-500 mb-1">{dateObj.day}</div>
-                        <div className="text-xl font-semibold">{dateObj.dayNum}</div>
+                        <div className="text-xs text-gray-500 mb-1">{dateObj.day}</div>
+                        <div className="text-lg font-semibold">{dateObj.dayNum}</div>
                       </button>
                     ))}
                   </div>
@@ -411,7 +492,9 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-2 mb-4">
                     <Clock className="h-5 w-5 text-mint-dark" />
-                    <h3 className="text-lg font-semibold text-charcoal">Available Times ({getTimezoneDisplayWithOffset(timezone)})</h3>
+                    <h3 className="text-lg font-semibold text-charcoal">
+                      Available Times ({getTimezoneDisplayWithOffset(timezone)})
+                    </h3>
                   </div>
 
                   {bookingLoading && <p className="text-charcoal/70">Loading available times...</p>}
@@ -431,7 +514,9 @@ export function BookingForm({ expertId, serviceId }: BookingFormProps) {
                                 : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
                           }`}
                         >
-                          {timeSlot.time.includes('AM') || timeSlot.time.includes('PM') ? timeSlot.time : formatTime12Hour(timeSlot.time)}
+                          {timeSlot.time.includes("AM") || timeSlot.time.includes("PM")
+                            ? timeSlot.time
+                            : formatTime12Hour(timeSlot.time)}
                         </button>
                       ))}
                     </div>
