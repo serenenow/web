@@ -1,4 +1,5 @@
 import { apiRequest } from "./base"
+import { getBrowserTimezone } from "../utils/time-utils"
 
 /**
  * Enum for days of the week (1-7, Monday to Sunday)
@@ -30,6 +31,24 @@ export interface AvailabilityDto {
  */
 export interface AvailabilityAddUpdateRequest {
   availabilities: AvailabilityDto[]
+}
+
+// Get available slots
+export interface TimeSlot {
+  startTime: string // ISO 8601 format
+  endTime: String
+  available?: boolean // Optional property for UI display
+}
+
+// Format the response to match what the UI expects
+export interface FormattedTimeSlot {
+  time: string
+  available: boolean
+  timezone: string
+}
+
+export interface FormattedAvailableSlots {
+  timeSlots: Array<FormattedTimeSlot>
 }
 
 /**
@@ -66,4 +85,42 @@ export const updateExpertAvailability = async (expertId: string, data: Availabil
     console.error("Error updating expert availability:", error)
     throw error
   }
+}
+
+// Helper to format time slots for the UI
+function formatTimeSlots(timeSlots: TimeSlot[]): FormattedTimeSlot[] {
+  return timeSlots.map((slot) => {
+    // Parse the ISO string to get hours and minutes
+    const startTime = new Date(slot.startTime)
+    const hours = startTime.getHours()
+    const minutes = startTime.getMinutes()
+
+    // Format as 24-hour time (e.g., "09:00") for internal use
+    // The UI will format it to 12-hour format using formatTime12Hour
+    const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+
+    return {
+      time: formattedTime,
+      available: true, // Assume all returned slots are available
+      timezone: getBrowserTimezone(), // Use browser's timezone
+    }
+  })
+}
+
+export async function getAvailableSlots(expertId: string, serviceId: string, date?: string) {
+  const params = new URLSearchParams()
+  params.append("expert_id", expertId)
+  params.append("service_id", serviceId)
+  if (date) params.append("selected_date", date)
+
+  // Get time slots from API
+  const timeSlots = await apiRequest<TimeSlot[]>(`/service/slots?${params}`)
+
+  // Format the response for the UI
+  const formattedResponse: FormattedAvailableSlots = {
+    // Format time slots
+    timeSlots: formatTimeSlots(timeSlots),
+  }
+
+  return formattedResponse
 }

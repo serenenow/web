@@ -6,7 +6,8 @@ import { CheckCircle, Calendar, Clock, MapPin, User, IndianRupee, ArrowLeft, Hom
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import type { VerifyCodeResponse, ServiceDetailDto } from "@/lib/api/booking"
+import type { ServiceDetailDto } from "@/lib/api/service"
+import { VerifyCodeResponse, getCachedBookingData } from "@/lib/services/client-code-service"
 
 interface BookingSuccessData {
   orderId?: string
@@ -26,18 +27,12 @@ export default function BookingSuccessPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Get booking data from sessionStorage
-    const storedBookingData = sessionStorage.getItem("bookingData")
-    if (storedBookingData) {
-      const data = JSON.parse(storedBookingData) as VerifyCodeResponse
-      setBookingData(data)
-    }
-
     // Get success data from URL params or sessionStorage
     const orderId = searchParams.get("orderId")
     const appointmentId = searchParams.get("appointmentId")
 
     const storedSuccessData = sessionStorage.getItem("bookingSuccessData")
+    
     if (storedSuccessData) {
       const successInfo = JSON.parse(storedSuccessData) as BookingSuccessData
       setSuccessData({
@@ -120,13 +115,13 @@ export default function BookingSuccessPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Therapist Info */}
-              {bookingData?.expert && (
+              {bookingData?.expertProfile && (
                 <div className="flex items-center space-x-4 p-4 bg-mint/5 rounded-lg">
                   <div className="w-16 h-16 bg-mint/10 rounded-full flex items-center justify-center overflow-hidden">
-                    {bookingData.expert.pictureUrl ? (
+                    {bookingData.expertProfile.pictureUrl ? (
                       <Image
-                        src={bookingData.expert.pictureUrl || "/placeholder.svg"}
-                        alt={bookingData.expert.name}
+                        src={bookingData.expertProfile.pictureUrl || "/placeholder.svg"}
+                        alt={bookingData.expertProfile.name}
                         width={64}
                         height={64}
                         className="w-full h-full object-cover"
@@ -136,9 +131,9 @@ export default function BookingSuccessPage() {
                     )}
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-charcoal">{bookingData.expert.name}</h3>
-                    <p className="text-charcoal/70">{bookingData.expert.qualification}</p>
-                    <p className="text-sm text-mint-dark">{bookingData.expert.email}</p>
+                    <h3 className="text-lg font-semibold text-charcoal">{bookingData.expertProfile.name}</h3>
+                    <p className="text-charcoal/70">{bookingData.expertProfile.qualification}</p>
+                    <p className="text-sm text-mint-dark">{bookingData.expertProfile.email}</p>
                   </div>
                 </div>
               )}
@@ -186,7 +181,7 @@ export default function BookingSuccessPage() {
 
                   <div>
                     <h4 className="font-medium text-charcoal mb-2">Timezone</h4>
-                    <p className="text-charcoal/70">{bookingData?.expert.timeZone || "IST"}</p>
+                    <p className="text-charcoal/70">{bookingData?.expertProfile.timeZone || "IST"}</p>
                   </div>
                 </div>
               </div>
@@ -194,7 +189,7 @@ export default function BookingSuccessPage() {
           </Card>
 
           {/* Client Information */}
-          {bookingData?.client && (
+          {bookingData?.clientResponse.client && (
             <Card className="border-mint/20 shadow-sm">
               <CardHeader className="pb-4">
                 <h2 className="text-xl font-semibold text-charcoal flex items-center">
@@ -206,11 +201,11 @@ export default function BookingSuccessPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h4 className="font-medium text-charcoal mb-2">Name</h4>
-                    <p className="text-charcoal/70">{bookingData.client.name}</p>
+                    <p className="text-charcoal/70">{bookingData.clientResponse.client.name}</p>
                   </div>
                   <div>
                     <h4 className="font-medium text-charcoal mb-2">Email</h4>
-                    <p className="text-charcoal/70">{bookingData.client.email}</p>
+                    <p className="text-charcoal/70">{bookingData.clientResponse.client.email}</p>
                   </div>
                 </div>
               </CardContent>

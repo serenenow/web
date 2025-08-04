@@ -1,17 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Clock, MapPin, Globe, Check, ChevronLeft, ChevronRight, Edit2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { getAvailableSlots } from "@/lib/api/availability"
-import { processPublicBooking } from "@/lib/services/booking-service"
+import { validateClientCode, getCachedBookingData, type VerifyCodeResponse } from "@/lib/services/client-code-service"
+import { processAuthenticatedBooking } from "@/lib/services/booking-service"
 import { apiRequest } from "@/lib/api/base"
+import { getAvailableSlots } from "@/lib/api/availability"
 import type { ServiceDetailDto } from "@/lib/api/service"
-import type { ExpertProfileResponse } from "@/lib/api/users"
-
 import {
   timezones,
   getBrowserTimezone,
@@ -21,23 +19,24 @@ import {
   convertTimeToTimezone,
 } from "@/lib/utils/time-utils"
 
-interface PublicBookingPageProps {
+interface ClientBookingPageProps {
   params: Promise<{ expertId: string }>
 }
 
-type Step = "service" | "date" | "time" | "client" | "payment"
+type Step = "service" | "date" | "time" | "payment"
 
 interface StepStatus {
   completed: boolean
   data?: any
 }
 
-export default function PublicBookingPage({ params }: PublicBookingPageProps) {
+export default function ClientBookingPage({ params }: ClientBookingPageProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [expertId, setExpertId] = useState<string>("")
-  const [expert, setExpert] = useState<ExpertProfileResponse | null>(null)
-  const [services, setServices] = useState<ServiceDetailDto[]>([])
+  const [bookingData, setBookingData] = useState<VerifyCodeResponse | null>(null)
+  const [clientCode, setClientCode] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -47,7 +46,6 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
     service: { completed: false },
     date: { completed: false },
     time: { completed: false },
-    client: { completed: false },
     payment: { completed: false },
   })
 
@@ -56,8 +54,6 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [timezone, setTimezone] = useState(getBrowserTimezone() || "Asia/Kolkata")
-  const [clientName, setClientName] = useState("")
-  const [clientEmail, setClientEmail] = useState("")
   const [paymentMode, setPaymentMode] = useState<"online" | "direct">("online")
 
   // Calendar state
@@ -99,41 +95,65 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
     initParams()
   }, [params])
 
-  // Load expert data and services
+  // Load booking data when expertId and clientCode are available
   useEffect(() => {
-    if (!expertId) return
-
-    const loadExpertData = async () => {
-      try {
-        setLoading(true)
-
-        // Fetch expert profile
-        const expertResponse = await apiRequest<ExpertProfileResponse>(`/web/auth/expert/profile/${expertId}`)
-        setExpert(expertResponse)
-
-        // Fetch expert services
-        const servicesResponse = await apiRequest<ServiceDetailDto[]>(`/web/auth/expert/services/${expertId}`)
-        setServices(servicesResponse)
-
-        // Auto-select service if only one
-        if (servicesResponse.length === 1) {
-          setSelectedService(servicesResponse[0])
-          setStepStatus((prev) => ({
-            ...prev,
-            service: { completed: true, data: servicesResponse[0] },
-          }))
-          setCurrentStep("date")
-        }
-      } catch (err) {
-        console.error("Failed to load expert data:", err)
-        setError("Failed to load expert information")
-      } finally {
-        setLoading(false)
-      }
+    const code = searchParams.get("clientCode")
+    if (!code) {
+      setError("Missing client code. Please use a valid booking link.")
+      setLoading(false)
+      return
     }
 
-    loadExpertData()
-  }, [expertId])
+    if (!expertId) return
+
+    setClientCode(code)
+    loadBookingData(code)
+  }, [expertId, searchParams])
+
+  const loadBookingData = async (clientCode: string) => {
+    try {
+      setLoading(true)
+
+      // Try to get cached data first
+      let data = getCachedBookingData(clientCode)
+
+      if (!data) {
+        // If no cached data, validate the code
+        data = await validateClientCode(clientCode)
+      }
+
+      // Check if profile is set up
+      if (!data.clientResponse.hasSetupProfile) {
+        router.push(`/book/register?clientCode=${clientCode}`)
+        return
+      }
+
+      setBookingData(data)
+
+      // Auto-select service if only one
+      if (data.services.length === 1) {
+        setSelectedService(data.services[0])
+        setStepStatus((prev) => ({
+          ...prev,
+          service: { completed: true, data: data.services[0] },
+        }))
+        setCurrentStep("date")
+      }
+    } catch (err: any) {
+      console.error("Failed to load booking data:", err)
+      setError(err.message || "Failed to load booking information")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fetch available slots function
+  const fetchAvailableSlots = async (expertId: string, serviceId: string, date?: string) => {
+    setSlotsLoading(true)
+    let availableSlots = await getAvailableSlots(expertId, serviceId, date)
+    setSlotsLoading(false)
+    return availableSlots
+  }
 
   // Generate dates for current month
   const generateDatesForMonth = (month: Date) => {
@@ -168,11 +188,10 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
 
   // Fetch time slots when date is selected
   useEffect(() => {
-    if (selectedDate && selectedService) {
+    if (selectedDate && selectedService && expertId) {
       const loadTimeSlots = async () => {
-        setSlotsLoading(true)
         try {
-          const slots = await getAvailableSlots(expertId, selectedService.id, selectedDate)
+          const slots = await fetchAvailableSlots(expertId, selectedService.id, selectedDate)
           const originalSlots = slots.timeSlots.map((slot) => ({
             ...slot,
             originalTime: slot.time,
@@ -188,8 +207,6 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
           setAvailableTimeSlots(convertedSlots)
         } catch (err) {
           console.error("Failed to load time slots:", err)
-        } finally {
-          setSlotsLoading(false)
         }
       }
 
@@ -232,7 +249,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
     }))
 
     // Move to next step
-    const steps: Step[] = ["service", "date", "time", "client", "payment"]
+    const steps: Step[] = ["service", "date", "time", "payment"]
     const currentIndex = steps.indexOf(step)
     if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1])
@@ -262,14 +279,8 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
     handleStepComplete("time", time)
   }
 
-  const handleClientInfoSubmit = () => {
-    if (clientName && clientEmail) {
-      handleStepComplete("client", { name: clientName, email: clientEmail })
-    }
-  }
-
   const handleBooking = async () => {
-    if (!selectedService || !selectedDate || !selectedTime || !clientName || !clientEmail) {
+    if (!selectedService || !selectedDate || !selectedTime || !bookingData) {
       setBookingError("Please complete all steps")
       return
     }
@@ -278,16 +289,15 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
     setBookingError(null)
 
     try {
-      const result = await processPublicBooking({
-        expertId,
+      const result = await processAuthenticatedBooking({
+        clientId: bookingData.clientResponse.client.id,
+        expertId: expertId,
         serviceId: selectedService.id,
         selectedService,
         date: selectedDate,
         time: selectedTime,
         timezone,
         paymentMode,
-        clientName,
-        clientEmail,
       })
 
       if (result.success) {
@@ -325,17 +335,17 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light flex items-center justify-center">
         <div className="text-center">
-          <p className="text-charcoal/70">Loading expert information...</p>
+          <p className="text-charcoal/70">Loading booking information...</p>
         </div>
       </div>
     )
   }
 
-  if (error || !expert) {
+  if (error || !bookingData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light flex items-center justify-center">
         <div className="text-center">
-          <p className="text-charcoal/70">{error || "Expert not found"}</p>
+          <p className="text-charcoal/70">{error || "Booking data not found"}</p>
         </div>
       </div>
     )
@@ -348,7 +358,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light">
       <div className="container mx-auto px-6 py-8">
-         {/* Header with SereneNow Branding */}
+        {/* Header with SereneNow Branding */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold text-charcoal">Book Appointment</h1>
           <div className="flex items-center space-x-2 text-sm text-charcoal/60">
@@ -359,37 +369,62 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {/* Left Panel - Expert Info & Booking Summary */}
+          {/* Left Panel - Expert Info & Client Info & Booking Summary */}
           <div className="lg:col-span-1 space-y-6">
             {/* Expert Information */}
             <Card className="border-mint/20 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-4 mb-4">
                   <img
-                    src={expert.pictureUrl || "/placeholder.svg?height=80&width=80"}
-                    alt={expert.name}
+                    src={bookingData.expertProfile.pictureUrl || "/placeholder.svg?height=80&width=80"}
+                    alt={bookingData.expertProfile.name}
                     className="w-20 h-20 rounded-full object-cover border-2 border-mint/20"
                   />
                   <div>
-                    <h2 className="text-xl font-bold text-charcoal">{expert.name}</h2>
-                    <p className="text-sm text-charcoal/70">{expert.qualification}</p>
-                    <p className="text-xs text-mint-dark mt-1">{getTimezoneDisplayWithOffset(expert.timeZone)}</p>
+                    <h2 className="text-xl font-bold text-charcoal">{bookingData.expertProfile.name}</h2>
+                    <p className="text-sm text-charcoal/70">{bookingData.expertProfile.qualification}</p>
+                    <p className="text-xs text-mint-dark mt-1">
+                      {getTimezoneDisplayWithOffset(bookingData.expertProfile.timeZone)}
+                    </p>
                   </div>
                 </div>
 
-                {expert.description && (
+                {bookingData.expertProfile.description && (
                   <div>
                     <h3 className="font-semibold text-charcoal mb-2">About</h3>
-                    <p className="text-sm text-charcoal/70">{expert.description}</p>
+                    <p className="text-sm text-charcoal/70">{bookingData.expertProfile.description}</p>
                   </div>
                 )}
 
-                {expert.languages && (
+                {bookingData.expertProfile.languages && (
                   <div>
                     <h3 className="font-semibold text-charcoal mb-2">Languages</h3>
-                    <p className="text-sm text-charcoal/70">{expert.languages}</p>
+                    <p className="text-sm text-charcoal/70">{bookingData.expertProfile.languages}</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Client Information */}
+            <Card className="border-mint/20 shadow-sm">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-charcoal mb-4">Your Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <p className="font-medium text-charcoal">Name</p>
+                    <p className="text-charcoal/70">{bookingData.clientResponse.client.name}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-charcoal">Email</p>
+                    <p className="text-charcoal/70">{bookingData.clientResponse.client.email}</p>
+                  </div>
+                  {bookingData.clientResponse.client.phoneNumber && (
+                    <div>
+                      <p className="font-medium text-charcoal">Phone</p>
+                      <p className="text-charcoal/70">{bookingData.clientResponse.client.phoneNumber}</p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -419,14 +454,6 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
                           : formatTime12Hour(selectedTime)}
                       </p>
                       <p className="text-charcoal/70">{getTimezoneDisplayWithOffset(timezone)}</p>
-                    </div>
-                  )}
-
-                  {clientName && clientEmail && (
-                    <div>
-                      <p className="font-medium text-charcoal">Client</p>
-                      <p className="text-charcoal/70">{clientName}</p>
-                      <p className="text-charcoal/70">{clientEmail}</p>
                     </div>
                   )}
 
@@ -465,72 +492,74 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
 
           {/* Right Panel - Stepper */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Step 1: Service Selection */}
-            <Card className={`border-mint/20 shadow-sm ${currentStep === "service" ? "ring-2 ring-mint-dark" : ""}`}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    {stepStatus.service.completed ? (
-                      <div className="w-8 h-8 bg-mint-dark rounded-full flex items-center justify-center">
-                        <Check className="h-5 w-5 text-white" />
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 bg-mint/20 rounded-full flex items-center justify-center">
-                        <span className="text-mint-dark font-semibold">1</span>
-                      </div>
+            {/* Step 1: Service Selection (only if multiple services) */}
+            {bookingData.services.length > 1 && (
+              <Card className={`border-mint/20 shadow-sm ${currentStep === "service" ? "ring-2 ring-mint-dark" : ""}`}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      {stepStatus.service.completed ? (
+                        <div className="w-8 h-8 bg-mint-dark rounded-full flex items-center justify-center">
+                          <Check className="h-5 w-5 text-white" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 bg-mint/20 rounded-full flex items-center justify-center">
+                          <span className="text-mint-dark font-semibold">1</span>
+                        </div>
+                      )}
+                      <h3 className="text-lg font-semibold text-charcoal">Select Service</h3>
+                    </div>
+                    {stepStatus.service.completed && (
+                      <Button variant="ghost" size="sm" onClick={() => handleStepEdit("service")}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
                     )}
-                    <h3 className="text-lg font-semibold text-charcoal">Select Service</h3>
                   </div>
-                  {stepStatus.service.completed && (
-                    <Button variant="ghost" size="sm" onClick={() => handleStepEdit("service")}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
 
-                {(currentStep === "service" || !stepStatus.service.completed) && (
-                  <div className="space-y-3">
-                    {services.map((service) => (
-                      <button
-                        key={service.id}
-                        onClick={() => handleServiceSelect(service)}
-                        className={`w-full p-4 rounded-lg border text-left transition-colors ${
-                          selectedService?.id === service.id
-                            ? "border-mint-dark bg-mint/5"
-                            : "border-gray-200 hover:border-mint-dark"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium text-charcoal">{service.title}</h4>
-                            <p className="text-sm text-charcoal/70 mt-1">{service.description}</p>
-                            <div className="flex items-center space-x-4 mt-2 text-sm text-charcoal/70">
-                              <div className="flex items-center space-x-1">
-                                <Clock className="h-4 w-4" />
-                                <span>{service.durationMin} minutes</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <MapPin className="h-4 w-4" />
-                                <span>{service.location}</span>
+                  {(currentStep === "service" || !stepStatus.service.completed) && (
+                    <div className="space-y-3">
+                      {bookingData.services.map((service) => (
+                        <button
+                          key={service.id}
+                          onClick={() => handleServiceSelect(service)}
+                          className={`w-full p-4 rounded-lg border text-left transition-colors ${
+                            selectedService?.id === service.id
+                              ? "border-mint-dark bg-mint/5"
+                              : "border-gray-200 hover:border-mint-dark"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium text-charcoal">{service.title}</h4>
+                              <p className="text-sm text-charcoal/70 mt-1">{service.description}</p>
+                              <div className="flex items-center space-x-4 mt-2 text-sm text-charcoal/70">
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="h-4 w-4" />
+                                  <span>{service.durationMin} minutes</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <MapPin className="h-4 w-4" />
+                                  <span>{service.location}</span>
+                                </div>
                               </div>
                             </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-charcoal">₹{service.price}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-charcoal">₹{service.price}</p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                {stepStatus.service.completed && currentStep !== "service" && (
-                  <div className="text-sm text-charcoal/70">
-                    Selected: {stepStatus.service.data?.title} - ₹{stepStatus.service.data?.price}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  {stepStatus.service.completed && currentStep !== "service" && (
+                    <div className="text-sm text-charcoal/70">
+                      Selected: {stepStatus.service.data?.title} - ₹{stepStatus.service.data?.price}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Step 2: Date Selection */}
             <Card className={`border-mint/20 shadow-sm ${currentStep === "date" ? "ring-2 ring-mint-dark" : ""}`}>
@@ -543,7 +572,9 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
                       </div>
                     ) : (
                       <div className="w-8 h-8 bg-mint/20 rounded-full flex items-center justify-center">
-                        <span className="text-mint-dark font-semibold">2</span>
+                        <span className="text-mint-dark font-semibold">
+                          {bookingData.services.length > 1 ? "2" : "1"}
+                        </span>
                       </div>
                     )}
                     <h3 className="text-lg font-semibold text-charcoal">Select Date</h3>
@@ -610,7 +641,9 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
                       </div>
                     ) : (
                       <div className="w-8 h-8 bg-mint/20 rounded-full flex items-center justify-center">
-                        <span className="text-mint-dark font-semibold">3</span>
+                        <span className="text-mint-dark font-semibold">
+                          {bookingData.services.length > 1 ? "3" : "2"}
+                        </span>
                       </div>
                     )}
                     <h3 className="text-lg font-semibold text-charcoal">Select Time</h3>
@@ -678,79 +711,17 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
               </CardContent>
             </Card>
 
-            {/* Step 4: Client Information */}
-            <Card className={`border-mint/20 shadow-sm ${currentStep === "client" ? "ring-2 ring-mint-dark" : ""}`}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    {stepStatus.client.completed ? (
-                      <div className="w-8 h-8 bg-mint-dark rounded-full flex items-center justify-center">
-                        <Check className="h-5 w-5 text-white" />
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 bg-mint/20 rounded-full flex items-center justify-center">
-                        <span className="text-mint-dark font-semibold">4</span>
-                      </div>
-                    )}
-                    <h3 className="text-lg font-semibold text-charcoal">Your Information</h3>
-                  </div>
-                  {stepStatus.client.completed && (
-                    <Button variant="ghost" size="sm" onClick={() => handleStepEdit("client")}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-
-                {(currentStep === "client" || !stepStatus.client.completed) && stepStatus.time.completed && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal mb-2">Full Name</label>
-                      <Input
-                        value={clientName}
-                        onChange={(e) => setClientName(e.target.value)}
-                        placeholder="Enter your full name"
-                        className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-charcoal mb-2">Email Address</label>
-                      <Input
-                        type="email"
-                        value={clientEmail}
-                        onChange={(e) => setClientEmail(e.target.value)}
-                        placeholder="Enter your email address"
-                        className="border-mint/20 focus:border-mint-dark focus:ring-mint-dark"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleClientInfoSubmit}
-                      disabled={!clientName || !clientEmail}
-                      className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white"
-                    >
-                      Continue
-                    </Button>
-                  </div>
-                )}
-
-                {stepStatus.client.completed && currentStep !== "client" && (
-                  <div className="text-sm text-charcoal/70">
-                    {stepStatus.client.data?.name} ({stepStatus.client.data?.email})
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Step 5: Payment */}
+            {/* Step 4: Payment */}
             <Card className={`border-mint/20 shadow-sm ${currentStep === "payment" ? "ring-2 ring-mint-dark" : ""}`}>
               <CardContent className="p-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-8 h-8 bg-mint/20 rounded-full flex items-center justify-center">
-                    <span className="text-mint-dark font-semibold">5</span>
+                    <span className="text-mint-dark font-semibold">{bookingData.services.length > 1 ? "4" : "3"}</span>
                   </div>
                   <h3 className="text-lg font-semibold text-charcoal">Payment</h3>
                 </div>
 
-                {currentStep === "payment" && stepStatus.client.completed && (
+                {currentStep === "payment" && stepStatus.time.completed && (
                   <div className="space-y-4">
                     <div className="space-y-3">
                       <button

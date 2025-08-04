@@ -57,7 +57,6 @@ export function getClientAuthToken(): string | null {
 export function removeClientAuthToken(): void {
   if (typeof window !== "undefined") {
     localStorage.removeItem("client_auth_token")
-    localStorage.removeItem("client_data")
   }
 }
 
@@ -98,7 +97,5 @@ export function clearClientData(): void {
   if (typeof window !== "undefined") {
     removeClientAuthToken()
     localStorage.removeItem("client_data")
-    sessionStorage.removeItem("clientResponse")
-    sessionStorage.removeItem("bookingData")
   }
 }

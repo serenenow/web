@@ -1,5 +1,6 @@
 // Authentication related API calls
 import { apiRequest } from "./base"
+import type { ExpertDto } from "./users"
 
 interface EmailValidateRequest {
   email: string
@@ -8,18 +9,6 @@ interface EmailValidateRequest {
 interface EmailVerifyRequest {
   email: string
   code: string
-}
-
-interface ExpertDto {
-  id: string
-  email: string
-  name: string
-  qualification: string
-  pictureUrl: string
-  authSource: string
-  activationStatus: string
-  timeZone: string
-  firebaseTokenId?: string
 }
 
 interface ExpertResponse {

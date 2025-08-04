@@ -39,6 +39,17 @@ export interface ExpertDto {
   firebaseTokenId?: string
 }
 
+export interface ExpertProfileResponse {
+  id: string
+  email: string
+  name: string
+  qualification: string
+  pictureUrl: string
+  timeZone: string
+  description?: string
+  languages: string
+}
+
 export interface ServiceDto {
   id: string
   title: string

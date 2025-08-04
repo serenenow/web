@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Gender } from "@/lib/api/client"
 import Image from "next/image"
 import { ArrowLeft, User, Phone, MapPin, UserCheck, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,9 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { useBooking } from "@/hooks/use-booking"
+import { ClientUpdateRequest, updateClientProfile } from "@/lib/services/client-registration-service"
+import { type VerifyCodeResponse, getCachedBookingData, clearCachedBookingData } from "@/lib/services/client-code-service"
 import { useClientData } from "@/hooks/use-client-data"
-import type { VerifyCodeResponse, WebClientRegisterRequest } from "@/lib/api/booking"
+import { getBrowserTimezone } from "@/lib/utils/time-utils"
+import { clearClientData } from "@/lib/api/client-auth"
 
 const GENDERS = [
   { value: "MALE", label: "Male" },
@@ -33,6 +34,7 @@ const EMERGENCY_RELATIONS = [
 ]
 
 export default function ClientRegistrationPage() {
+  const [isLoading, setIsLoading] = useState(false)
   const [bookingData, setBookingData] = useState<VerifyCodeResponse | null>(null)
   const [clientCode, setClientCode] = useState("")
   const [formData, setFormData] = useState({
@@ -58,37 +60,34 @@ export default function ClientRegistrationPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  const { updateProfile, loading } = useBooking()
   const { setClientResponseData } = useClientData()
 
   useEffect(() => {
-    // Get the code from URL params
-    const code = searchParams.get("code")
+        // Get the code from URL params
+    const code = searchParams.get("clientCode")
+
     if (code) {
+      // Save client code to use locally later
       setClientCode(code)
-    }
+      // Get verify code response
+      const verifyCodeResponse = getCachedBookingData(code)
+      if (verifyCodeResponse) {
+        // Set bookingData for local access during the registration
+        setBookingData(verifyCodeResponse)
+        // Store client data in our centralized system
+        setClientResponseData(verifyCodeResponse.clientResponse)
 
-    // Get booking data from sessionStorage
-    const storedData = sessionStorage.getItem("pendingBookingData")
-    if (storedData) {
-      const data = JSON.parse(storedData) as VerifyCodeResponse & { code: string }
-      setBookingData(data)
+        // Pre-fill email if available from the booking data
+        if (verifyCodeResponse.clientResponse.client.email) {
+          setFormData((prev) => ({ ...prev, email: verifyCodeResponse.clientResponse.client.email }))
+        }
 
-      // Store client data in our centralized system
-      setClientResponseData(data.clientResponse)
-
-      // Pre-fill email if available from the booking data
-      if (data.clientResponse.client.email) {
-        setFormData((prev) => ({ ...prev, email: data.clientResponse.client.email }))
+        if (verifyCodeResponse.clientResponse.client.name) {
+          setFormData((prev) => ({ ...prev, name: verifyCodeResponse.clientResponse.client.name }))
+        } 
       }
-      if (data.clientResponse.client.name) {
-        setFormData((prev) => ({ ...prev, name: data.clientResponse.client.name }))
-      }
-    } else {
-      // If no booking data, redirect back to code entry
-      router.push("/book")
     }
-  }, [searchParams, router])
+  }, [searchParams])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -179,17 +178,18 @@ export default function ClientRegistrationPage() {
     }
 
     try {
+      // setIsLoading(true)
       // Get client ID from the stored client response
       const clientId = bookingData.clientResponse.client.id
       
       // Create client update request
-      const updateData = {
+      const updateData: ClientUpdateRequest = {
         id: clientId,
         name: formData.name,
         phoneNumber: formData.phoneNumber,
         age: Number.parseInt(formData.age),
-        gender: formData.gender as Gender,
-        timezone: bookingData.expert.timeZone, // Use expert's timezone
+        gender: formData.gender,
+        timezone: getBrowserTimezone(), // Use expert's timezone
         address: {
           street: formData.street,
           city: formData.city,
@@ -207,7 +207,7 @@ export default function ClientRegistrationPage() {
       }
 
       // Update client profile
-      const updatedClient = await updateProfile(updateData)
+      const updatedClient = await updateClientProfile(updateData)
 
       // Update the booking data with the updated client
       const updatedBookingData = {
@@ -219,8 +219,9 @@ export default function ClientRegistrationPage() {
         }
       }
 
-      // Store updated booking data
-      sessionStorage.setItem("bookingData", JSON.stringify(updatedBookingData))
+      // Clear stored data
+      clearCachedBookingData(clientCode)
+      clearClientData()
 
       toast({
         title: "Profile setup complete!",
@@ -228,11 +229,8 @@ export default function ClientRegistrationPage() {
       })
 
       // Proceed to service selection or booking
-      if (bookingData.services.length > 1) {
-        router.push(`/book/services?code=${clientCode}`)
-      } else if (bookingData.services.length === 1) {
-        router.push(`/book/${bookingData.expert.id}/${bookingData.services[0].id}?code=${clientCode}`)
-      }
+      
+      router.push(`/book/${bookingData.expertProfile.id}?clientCode=${clientCode}`)
     } catch (error: any) {
       console.error("Profile update error:", error)
       toast({
@@ -240,6 +238,8 @@ export default function ClientRegistrationPage() {
         description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -279,10 +279,10 @@ export default function ClientRegistrationPage() {
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 bg-mint/10 rounded-full flex items-center justify-center overflow-hidden">
-                  {bookingData.expert.pictureUrl ? (
+                  {bookingData.expertProfile.pictureUrl ? (
                     <Image
-                      src={bookingData.expert.pictureUrl || "/placeholder.svg"}
-                      alt={bookingData.expert.name}
+                      src={bookingData.expertProfile.pictureUrl || "/placeholder.svg"}
+                      alt={bookingData.expertProfile.name}
                       width={64}
                       height={64}
                       className="w-full h-full object-cover"
@@ -292,8 +292,8 @@ export default function ClientRegistrationPage() {
                   )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-charcoal">{bookingData.expert.name}</h3>
-                  <p className="text-charcoal/70">{bookingData.expert.qualification}</p>
+                  <h3 className="text-lg font-semibold text-charcoal">{bookingData.expertProfile.name}</h3>
+                  <p className="text-charcoal/70">{bookingData.expertProfile.qualification}</p>
                   <p className="text-sm text-mint-dark">Code: {clientCode}</p>
                 </div>
               </div>
@@ -330,7 +330,7 @@ export default function ClientRegistrationPage() {
                         value={formData.name}
                         onChange={(e) => handleInputChange("name", e.target.value)}
                         className="border-mint/20 focus:border-mint-dark"
-                        disabled={loading}
+                        disabled={isLoading}
                       />
                     </div>
 
@@ -345,7 +345,7 @@ export default function ClientRegistrationPage() {
                         value={formData.email}
                         onChange={(e) => handleInputChange("email", e.target.value)}
                         className="border-mint/20 focus:border-mint-dark"
-                        disabled={loading}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -362,7 +362,7 @@ export default function ClientRegistrationPage() {
                         value={formData.phoneNumber}
                         onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
                         className="border-mint/20 focus:border-mint-dark"
-                        disabled={loading}
+                        disabled={isLoading}
                       />
                     </div>
 
@@ -379,7 +379,7 @@ export default function ClientRegistrationPage() {
                         value={formData.age}
                         onChange={(e) => handleInputChange("age", e.target.value)}
                         className="border-mint/20 focus:border-mint-dark"
-                        disabled={loading}
+                        disabled={isLoading}
                       />
                     </div>
 
@@ -390,7 +390,7 @@ export default function ClientRegistrationPage() {
                       <Select
                         value={formData.gender}
                         onValueChange={(value: string) => handleInputChange("gender", value)}
-                        disabled={loading}
+                        disabled={isLoading}
                       >
                         <SelectTrigger className="border-mint/20 focus:border-mint-dark">
                           <SelectValue placeholder="Select gender" />
@@ -426,7 +426,7 @@ export default function ClientRegistrationPage() {
                         value={formData.street}
                         onChange={(e) => handleInputChange("street", e.target.value)}
                         className="border-mint/20 focus:border-mint-dark"
-                        disabled={loading}
+                        disabled={isLoading}
                       />
                     </div>
 
@@ -442,7 +442,7 @@ export default function ClientRegistrationPage() {
                           value={formData.city}
                           onChange={(e) => handleInputChange("city", e.target.value)}
                           className="border-mint/20 focus:border-mint-dark"
-                          disabled={loading}
+                          disabled={isLoading}
                         />
                       </div>
 
@@ -457,7 +457,7 @@ export default function ClientRegistrationPage() {
                           value={formData.state}
                           onChange={(e) => handleInputChange("state", e.target.value)}
                           className="border-mint/20 focus:border-mint-dark"
-                          disabled={loading}
+                          disabled={isLoading}
                         />
                       </div>
                     </div>
@@ -474,7 +474,7 @@ export default function ClientRegistrationPage() {
                           value={formData.pincode}
                           onChange={(e) => handleInputChange("pincode", e.target.value)}
                           className="border-mint/20 focus:border-mint-dark"
-                          disabled={loading}
+                          disabled={isLoading}
                         />
                       </div>
 
@@ -489,7 +489,7 @@ export default function ClientRegistrationPage() {
                           value={formData.country}
                           onChange={(e) => handleInputChange("country", e.target.value)}
                           className="border-mint/20 focus:border-mint-dark"
-                          disabled={loading}
+                          disabled={isLoading}
                         />
                       </div>
                     </div>
@@ -515,7 +515,7 @@ export default function ClientRegistrationPage() {
                         value={formData.emergencyName}
                         onChange={(e) => handleInputChange("emergencyName", e.target.value)}
                         className="border-mint/20 focus:border-mint-dark"
-                        disabled={loading}
+                        disabled={isLoading}
                       />
                     </div>
 
@@ -530,7 +530,7 @@ export default function ClientRegistrationPage() {
                         value={formData.emergencyPhone}
                         onChange={(e) => handleInputChange("emergencyPhone", e.target.value)}
                         className="border-mint/20 focus:border-mint-dark"
-                        disabled={loading}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -547,7 +547,7 @@ export default function ClientRegistrationPage() {
                         value={formData.emergencyEmail}
                         onChange={(e) => handleInputChange("emergencyEmail", e.target.value)}
                         className="border-mint/20 focus:border-mint-dark"
-                        disabled={loading}
+                        disabled={isLoading}
                       />
                     </div>
 
@@ -558,7 +558,7 @@ export default function ClientRegistrationPage() {
                       <Select
                         value={formData.emergencyRelation}
                         onValueChange={(value: string) => handleInputChange("emergencyRelation", value)}
-                        disabled={loading}
+                        disabled={isLoading}
                       >
                         <SelectTrigger className="border-mint/20 focus:border-mint-dark">
                           <SelectValue placeholder="Select relationship" />
@@ -578,9 +578,9 @@ export default function ClientRegistrationPage() {
                 <Button
                   type="submit"
                   className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
-                  disabled={loading}
+                  disabled={isLoading}
                 >
-                  {loading ? (
+                  {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating Account...

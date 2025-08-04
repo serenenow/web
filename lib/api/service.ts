@@ -1,5 +1,31 @@
 import { apiRequest } from "./base"
 
+export interface TaxRateDto {
+  id: string
+  rate: number
+  description: string
+}
+
+export interface ServiceDetailDto {
+  id: string
+  title: string
+  description: string
+  price: number
+  location: string
+  platformFees: number
+  totalTaxes: number
+  total: number
+  taxRate?: TaxRateDto
+  durationMin: number
+  bufferMin: number
+  cancellationDeadlineHours: number
+  cancellationPercent: number
+  rescheduleDeadlineHours: number
+  reschedulePercent: number
+  useCustomAvailability: boolean
+  minHoursNotice: number
+}
+
 export enum Location {
   IN_PERSON = "IN_PERSON",
   PHONE_CALL = "PHONE_CALL",

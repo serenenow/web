@@ -8,22 +8,25 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
-import { useBooking } from "@/hooks/use-booking"
+import { validateClientCode } from "@/lib/services/client-code-service"
 import { useClientData } from "@/hooks/use-client-data"
 
 export default function BookingCodeEntry() {
   const [clientCode, setClientCode] = useState("")
   const router = useRouter()
-  const { validateCode, loading, error } = useBooking()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { setClientResponseData } = useClientData()
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setLoading(true)
     e.preventDefault()
     if (clientCode.length !== 6) return
 
     try {
-      const result = await validateCode(clientCode)
+      const result = await validateClientCode(clientCode)
       
+      setLoading(false)
       // Store the client response data using our centralized approach
       setClientResponseData(result.clientResponse)
 
@@ -40,12 +43,14 @@ export default function BookingCodeEntry() {
           // Single service - go directly to booking
           router.push(`/book/${result.expert.id}/${result.services[0].id}?code=${clientCode}`)
         } else {
-          throw new Error("No services available for this code")
+          setError("No services available for this code")
+          console.error("No services available for this code")
         }
       }
     } catch (err) {
       // Error is handled by the hook
       console.error("Code validation failed:", err)
+      setError("Code validation failed: " + err)
     }
   }
 
