@@ -6,8 +6,10 @@ import {
   type AppointmentAddRequest } from "@/lib/api/booking"
 import { sendClientInvite } from "@/lib/api/client"
 import { setClientAuthToken } from "@/lib/api/client-auth"
-import { createTimeSlotFromString } from "@/lib/utils/time-utils"
 import type { ServiceDetailDto } from "@/lib/api/service"
+import { storePaymentSession } from "@/lib/utils/secure-payment"
+import { createBookingValidationSchema, validateObject, isValidString, isValidDateString, isValidTimeString } from "@/lib/utils/validation"
+import { logger } from "@/lib/utils/logger"
 
 export interface BookingData {
   expertId: string
@@ -19,6 +21,9 @@ export interface BookingData {
   paymentMode: "online" | "direct"
   clientName: string
   clientEmail: string
+  // Original UTC times from API (optional)
+  startTimeUtc: string
+  endTimeUtc: string
 }
 
 export interface AuthenticatedBookingData {
@@ -30,6 +35,9 @@ export interface AuthenticatedBookingData {
   time: string
   timezone: string
   paymentMode: "online" | "direct"
+  // Original UTC times from API (optional)
+  startTimeUtc: string
+  endTimeUtc: string
 }
 
 export interface BookingResult {
@@ -47,8 +55,20 @@ export interface BookingResult {
  */
 export async function processPublicBooking(bookingData: BookingData): Promise<BookingResult> {
   try {
+    // Validate booking data before proceeding
+    const validationSchema = createBookingValidationSchema();
+    const validation = validateObject(bookingData, validationSchema);
+    
+    if (!validation.isValid) {
+      console.log("Data "+ bookingData + " " + validationSchema)
+      logger.error("Booking validation failed:", validation.errors);
+      return {
+        success: false,
+        error: `Invalid booking data: ${Object.values(validation.errors).join(", ")}`
+      };
+    }
     // Step 1: Send client invite to get clientId and accessToken
-    console.log("Sending client invite...")
+    logger.info("Sending client invite...")
     const inviteResponse = await sendClientInvite({
       expertId: bookingData.expertId,
       name: bookingData.clientName,
@@ -72,18 +92,10 @@ export async function processPublicBooking(bookingData: BookingData): Promise<Bo
     // Save the access token to localStorage for subsequent API calls
     setClientAuthToken(accessToken)
 
-    console.log("Client invite sent, clientId:", clientId)
-
-    // Step 2: Create time slot
-    const timeSlot = createTimeSlotFromString(
-      bookingData.time,
-      bookingData.date,
-      bookingData.timezone,
-      bookingData.selectedService.durationMin,
-    )
+    logger.info("Client invite sent, clientId:", clientId)
 
     // Step 3: Create appointment
-    console.log("Creating appointment...")
+    logger.info("Creating appointment...")
     const appointmentResponse = await createBookingWithPayment({
       clientId,
       expertId: bookingData.expertId,
@@ -91,39 +103,44 @@ export async function processPublicBooking(bookingData: BookingData): Promise<Bo
       date: bookingData.date,
       time: bookingData.time,
       timezone: bookingData.timezone,
-      timeSlot,
+      startTimeUtc: bookingData.startTimeUtc,
+      endTimeUtc: bookingData.endTimeUtc,
       paymentMode: bookingData.paymentMode,
       serviceDetails: bookingData.selectedService,
     })
 
-    console.log("Appointment created:", appointmentResponse)
+    logger.info("Appointment created:", appointmentResponse)
 
     // Step 4: Handle payment if online
     if (bookingData.paymentMode === "online") {
-      console.log("Processing online payment...")
+      logger.info("Processing online payment...")
       const paymentSuccess = await handleCashfreePayment(
         appointmentResponse.paymentSessionId,
         appointmentResponse.orderId,
+        appointmentResponse.id,
+        {
+          bookingDate: bookingData.date,
+          bookingTime: bookingData.time,
+          selectedService: bookingData.selectedService,
+          paymentMethod: bookingData.paymentMode
+        }
       )
 
       if (!paymentSuccess) {
         throw new Error("Payment failed")
       }
+    } else {
+      // For direct payments, still store the payment session data securely
+      storePaymentSession({
+        orderId: appointmentResponse.orderId,
+        appointmentId: appointmentResponse.id,
+        paymentSessionId: appointmentResponse.paymentSessionId,
+        paymentMethod: bookingData.paymentMode,
+        bookingDate: bookingData.date,
+        bookingTime: bookingData.time,
+        selectedService: bookingData.selectedService
+      })
     }
-
-    // Step 5: Store success data for success page
-    const successData = {
-      orderId: appointmentResponse.orderId,
-      appointmentId: appointmentResponse.id,
-      paymentMethod: bookingData.paymentMode,
-      bookingDate: bookingData.date,
-      bookingTime: bookingData.time,
-      selectedService: bookingData.selectedService,
-      clientName: bookingData.clientName,
-      clientEmail: bookingData.clientEmail,
-    }
-
-    sessionStorage.setItem("bookingSuccessData", JSON.stringify(successData))
 
     return {
       success: true,
@@ -144,13 +161,30 @@ export async function processPublicBooking(bookingData: BookingData): Promise<Bo
  */
 export async function processAuthenticatedBooking(bookingData: AuthenticatedBookingData): Promise<BookingResult> {
   try {
-    // Create time slot
-    const timeSlot = createTimeSlotFromString(
-      bookingData.time,
-      bookingData.date,
-      bookingData.timezone,
-      bookingData.selectedService.durationMin,
-    )
+    // Validate booking data before proceeding
+    const validationSchema = {
+      clientId: (value: string) => isValidString(value),
+      expertId: (value: string) => isValidString(value),
+      serviceId: (value: string) => isValidString(value),
+      selectedService: (value: any) => value && typeof value === 'object',
+      date: (value: string) => isValidDateString(value),
+      time: (value: string) => isValidTimeString(value),
+      timezone: (value: string) => isValidString(value),
+      paymentMode: (value: string) => ['online', 'direct'].includes(value),
+      // Optional UTC time fields - if present, they should be valid ISO strings
+      startTimeUtc: (value: string | undefined) => value === undefined || (typeof value === 'string' && value.length > 0),
+      endTimeUtc: (value: string | undefined) => value === undefined || (typeof value === 'string' && value.length > 0),
+    };
+    
+    const validation = validateObject(bookingData, validationSchema);
+    
+    if (!validation.isValid) {
+      logger.error("Authenticated booking validation failed:", validation.errors);
+      return {
+        success: false,
+        error: `Invalid booking data: ${Object.values(validation.errors).join(", ")}`
+      };
+    }
 
     // Create appointment
     const appointmentResponse = await createBookingWithPayment({
@@ -160,7 +194,8 @@ export async function processAuthenticatedBooking(bookingData: AuthenticatedBook
       date: bookingData.date,
       time: bookingData.time,
       timezone: bookingData.timezone,
-      timeSlot,
+      startTimeUtc: bookingData.startTimeUtc,
+      endTimeUtc: bookingData.endTimeUtc,
       paymentMode: bookingData.paymentMode,
       serviceDetails: bookingData.selectedService,
     })
@@ -170,24 +205,30 @@ export async function processAuthenticatedBooking(bookingData: AuthenticatedBook
       const paymentSuccess = await handleCashfreePayment(
         appointmentResponse.paymentSessionId,
         appointmentResponse.orderId,
+        appointmentResponse.id,
+        {
+          bookingDate: bookingData.date,
+          bookingTime: bookingData.time,
+          selectedService: bookingData.selectedService,
+          paymentMethod: bookingData.paymentMode
+        }
       )
 
       if (!paymentSuccess) {
         throw new Error("Payment failed")
       }
+    } else {
+      // For direct payments, still store the payment session data securely
+      storePaymentSession({
+        orderId: appointmentResponse.orderId,
+        appointmentId: appointmentResponse.id,
+        paymentSessionId: appointmentResponse.paymentSessionId,
+        paymentMethod: bookingData.paymentMode,
+        bookingDate: bookingData.date,
+        bookingTime: bookingData.time,
+        selectedService: bookingData.selectedService
+      })
     }
-
-    // Store success data
-    const successData = {
-      orderId: appointmentResponse.orderId,
-      appointmentId: appointmentResponse.id,
-      paymentMethod: bookingData.paymentMode,
-      bookingDate: bookingData.date,
-      bookingTime: bookingData.time,
-      selectedService: bookingData.selectedService,
-    }
-
-    sessionStorage.setItem("bookingSuccessData", JSON.stringify(successData))
 
     return {
       success: true,
@@ -212,18 +253,13 @@ async function createBookingWithPayment(bookingData: {
   time: string
   timezone?: string
   timeSlot?: { startTime: string; endTime: string }
+  startTimeUtc: string // Direct UTC time from API
+  endTimeUtc: string // Direct UTC time from API
   paymentMode: "online" | "direct"
   serviceDetails: ServiceDetailDto
 }) {
-  // Use provided timeSlot if available, otherwise create one with the specified timezone
-  const timeSlot =
-    bookingData.timeSlot ||
-    createTimeSlotFromString(
-      bookingData.time,
-      bookingData.date,
-      bookingData.timezone || "Asia/Kolkata",
-      bookingData.serviceDetails.durationMin,
-    )
+  // Use direct UTC times if available, then provided timeSlot, otherwise create one with the specified timezone
+  const timeSlot = { startTime: bookingData.startTimeUtc, endTime: bookingData.endTimeUtc }
 
   // Calculate payment amounts
   const amount = bookingData.serviceDetails.price

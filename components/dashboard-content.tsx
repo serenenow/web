@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { ServiceDto, ExpertAppointment } from "@/lib/api/users"
+import { ServiceDto } from "@/lib/api/users"
+import { ExpertAppointment } from "@/lib/api/appointments"
 import { format } from "date-fns"
 
 interface DashboardContentProps {
@@ -229,6 +230,7 @@ export function DashboardContent({ isNewUser, services, appointments }: Dashboar
                 <SelectValue placeholder="Payment mode" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="serenenow">SereneNow (Online)</SelectItem>
                 <SelectItem value="serenenow">SereneNow (Online)</SelectItem>
                 <SelectItem value="direct">Direct Payment</SelectItem>
               </SelectContent>

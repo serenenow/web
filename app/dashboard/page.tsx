@@ -7,11 +7,12 @@ import { SetupChecklist } from "@/components/setup-checklist"
 import { DashboardContent } from "@/components/dashboard-content"
 import { getAuthToken, getExpertData } from "@/lib/api/auth"
 import { fetchDashboardData, DashboardData } from "@/lib/api/dashboard"
+import { STORAGE_KEYS, plainLocalStorage } from "@/lib/utils/secure-storage"
 
 export default function DashboardPage() {
   const [user, setUser] = useState({
-    name: "Dr. Sarah Johnson",
-    email: "sarah@example.com",
+    name: "",
+    email: "",
     id: ""
   })
 
@@ -20,7 +21,7 @@ export default function DashboardPage() {
     appointments: [],
     isNewUser: true
   })
-  const [isNewUser, setIsNewUser] = useState(true)
+  const [isSetupProfile, setupProfile] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
@@ -47,8 +48,7 @@ export default function DashboardPage() {
           // Fetch dashboard data using expert ID
           const data = await fetchDashboardData(expertData.id)
           setDashboardData(data)
-          console.log(data.isNewUser);
-          setIsNewUser(data.isNewUser)
+          setupProfile(plainLocalStorage.getItem<boolean>(STORAGE_KEYS.EXPERT_SETUP_PROFILE_COMPLETE) || false)
         }
       } catch (error) {
         console.error("Auth check error:", error)
@@ -70,11 +70,12 @@ export default function DashboardPage() {
         router.push("/dashboard/availability")
         break
       case "client":
-        // For demo, mark setup as complete when they try to invite a client
         if (typeof window !== "undefined") {
-          localStorage.setItem("setup_complete", "true")
+          // Use plainLocalStorage instead of direct localStorage
+          plainLocalStorage.setItem(STORAGE_KEYS.EXPERT_SETUP_PROFILE_COMPLETE, true)
         }
-        setIsNewUser(false)
+        setupProfile(true)
+        router.push("/dashboard/clients")
         break
       default:
         break
@@ -100,17 +101,17 @@ export default function DashboardPage() {
           {/* Header */}
           <div className="mb-6 md:mb-8">
             <h1 className="text-2xl md:text-3xl font-bold text-charcoal mb-2">
-              {isNewUser ? "Welcome to SereneNow! 👋" : `Welcome back, ${user.name.split(" ")[1]}! 👋`}
+              {isSetupProfile ? `Welcome back, ${user.name.split(" ")[0]}! 👋` : "Welcome to SereneNow! 👋"}
             </h1>
             <p className="text-charcoal/70 text-sm md:text-base">
-              {isNewUser
-                ? "Let's get your practice set up and ready for clients."
-                : "Here's what's happening with your practice today."}
+              {isSetupProfile
+                ? "Here's what's happening with your practice today."
+                : "Let's get your practice set up and ready for clients."}
             </p>
           </div>
 
           {/* Content */}
-          {isNewUser ? <SetupChecklist onStepClick={handleSetupStep} /> : <DashboardContent 
+          {isSetupProfile != true ? <SetupChecklist onStepClick={handleSetupStep} /> : <DashboardContent 
             isNewUser={false}
             services={dashboardData.services}
             appointments={dashboardData.appointments}

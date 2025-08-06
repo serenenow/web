@@ -11,6 +11,7 @@ import { processPublicBooking } from "@/lib/services/booking-service"
 import { apiRequest } from "@/lib/api/base"
 import type { ServiceDetailDto } from "@/lib/api/service"
 import type { ExpertProfileResponse } from "@/lib/api/users"
+import type { FormattedTimeSlot } from "@/lib/api/availability"
 
 import {
   timezones,
@@ -54,7 +55,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
   // Form data
   const [selectedService, setSelectedService] = useState<ServiceDetailDto | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<FormattedTimeSlot | null>(null)
   const [timezone, setTimezone] = useState(getBrowserTimezone() || "Asia/Kolkata")
   const [clientName, setClientName] = useState("")
   const [clientEmail, setClientEmail] = useState("")
@@ -70,20 +71,8 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
       available: boolean
     }>
   >([])
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<
-    Array<{
-      time: string
-      available: boolean
-      timezone: string
-    }>
-  >([])
-  const [originalTimeSlots, setOriginalTimeSlots] = useState<
-    Array<{
-      time: string
-      available: boolean
-      timezone: string
-    }>
-  >([])
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<Array<FormattedTimeSlot>>([])
+  const [originalTimeSlots, setOriginalTimeSlots] = useState<Array<FormattedTimeSlot>>([])
 
   // Booking process
   const [bookingLoading, setBookingLoading] = useState(false)
@@ -175,7 +164,6 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
           const slots = await getAvailableSlots(expertId, selectedService.id, selectedDate)
           const originalSlots = slots.timeSlots.map((slot) => ({
             ...slot,
-            originalTime: slot.time,
           }))
 
           setOriginalTimeSlots(originalSlots)
@@ -206,7 +194,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
       }))
 
       setAvailableTimeSlots(convertedSlots)
-      setSelectedTime(null) // Reset selected time
+      setSelectedTimeSlot(null) // Reset selected time
     }
   }, [timezone, originalTimeSlots])
 
@@ -257,9 +245,9 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
     handleStepComplete("date", date)
   }
 
-  const handleTimeSelect = (time: string) => {
-    setSelectedTime(time)
-    handleStepComplete("time", time)
+  const handleTimeSelect = (timeSlot: FormattedTimeSlot) => {
+    setSelectedTimeSlot(timeSlot)
+    handleStepComplete("time", timeSlot.time)
   }
 
   const handleClientInfoSubmit = () => {
@@ -269,7 +257,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
   }
 
   const handleBooking = async () => {
-    if (!selectedService || !selectedDate || !selectedTime || !clientName || !clientEmail) {
+    if (!selectedService || !selectedDate || !selectedTimeSlot || !clientName || !clientEmail) {
       setBookingError("Please complete all steps")
       return
     }
@@ -283,11 +271,13 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
         serviceId: selectedService.id,
         selectedService,
         date: selectedDate,
-        time: selectedTime,
+        time: selectedTimeSlot.time,
         timezone,
         paymentMode,
         clientName,
         clientEmail,
+        startTimeUtc: selectedTimeSlot.startTimeUtc,
+        endTimeUtc: selectedTimeSlot.endTimeUtc
       })
 
       if (result.success) {
@@ -409,14 +399,14 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
                     </div>
                   )}
 
-                  {selectedDate && selectedTime && (
+                  {selectedDate && selectedTimeSlot && (
                     <div>
                       <p className="font-medium text-charcoal">Date & Time</p>
                       <p className="text-charcoal/70">
                         {formatDate(selectedDate)} at{" "}
-                        {selectedTime.includes("AM") || selectedTime.includes("PM")
-                          ? selectedTime
-                          : formatTime12Hour(selectedTime)}
+                        {selectedTimeSlot.time.includes("AM") || selectedTimeSlot.time.includes("PM")
+                          ? selectedTimeSlot.time
+                          : formatTime12Hour(selectedTimeSlot.time)}
                       </p>
                       <p className="text-charcoal/70">{getTimezoneDisplayWithOffset(timezone)}</p>
                     </div>
@@ -648,10 +638,10 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
                       {availableTimeSlots.map((timeSlot) => (
                         <button
                           key={timeSlot.time}
-                          onClick={() => handleTimeSelect(timeSlot.time)}
+                          onClick={() => handleTimeSelect(timeSlot)}
                           disabled={!timeSlot.available}
                           className={`p-3 rounded-lg border text-center transition-colors ${
-                            selectedTime === timeSlot.time
+                            selectedTimeSlot?.time === timeSlot.time
                               ? "border-mint-dark bg-mint-dark text-white"
                               : timeSlot.available
                                 ? "border-gray-200 hover:border-mint-dark hover:bg-mint/5"
@@ -765,7 +755,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
                         <div className="text-sm text-charcoal/70">Secure payment via Cashfree</div>
                       </button>
 
-                      <button
+                      {/* <button
                         onClick={() => setPaymentMode("direct")}
                         className={`w-full p-4 rounded-lg border text-left transition-colors ${
                           paymentMode === "direct"
@@ -775,7 +765,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
                       >
                         <div className="font-medium text-charcoal">Pay Directly to Therapist</div>
                         <div className="text-sm text-charcoal/70">Pay during or after the session</div>
-                      </button>
+                      </button> */}
                     </div>
 
                     {paymentMode === "online" && selectedService && (

@@ -11,6 +11,8 @@ import { type AvailabilityDto, getExpertAvailability, updateExpertAvailability }
 import { getExpertData } from "@/lib/api/auth"
 import { format, parseISO } from "date-fns"
 import { formatInTimeZone, getTimezoneOffset } from "date-fns-tz"
+import { logger } from "@/lib/utils/logger"
+import { formatDate } from "@/lib/utils/time-utils"
 import { 
   convertTimeToTimezone, 
   convertTimeToUTC, 
@@ -112,7 +114,7 @@ export default function AvailabilityPage() {
       processAvailabilityData(availabilityData)
       setIsLoading(false)
     } catch (error) {
-      console.error("Error fetching availability data:", error)
+      logger.error("Error fetching availability data:", error)
       setIsLoading(false)
     }
   }
@@ -373,9 +375,9 @@ export default function AvailabilityPage() {
       // Add to local state after successful API call
       setTimeOffEntries([...timeOffEntries, newEntry])
 
-      console.log("Time off entry added successfully!")
+      logger.info("Time off entry added successfully!")
     } catch (error) {
-      console.error("Failed to add time off entry:", error)
+      logger.error("Failed to add time off entry:", error)
     } finally {
       setIsSubmitting(false)
 
@@ -492,9 +494,9 @@ export default function AvailabilityPage() {
       setHasScheduleChanges(false)
 
       // Show success message
-      console.log("Schedule updated successfully!")
+      logger.info("Schedule updated successfully!")
     } catch (error) {
-      console.error("Failed to update schedule:", error)
+      logger.error("Failed to update schedule:", error)
     } finally {
       setIsSubmitting(false)
     }
@@ -512,7 +514,7 @@ export default function AvailabilityPage() {
     }
     
     if (!currentExpertId) {
-      console.error("Expert ID not available")
+      logger.error("Expert ID not available")
       return
     }
 
@@ -531,22 +533,15 @@ export default function AvailabilityPage() {
       setOriginalSchedule(JSON.parse(JSON.stringify(schedule)))
       setHasScheduleChanges(false)
 
-      console.log("All availability settings saved successfully!")
+      logger.info("All availability settings saved successfully!")
     } catch (error) {
-      console.error("Failed to save availability settings:", error)
+      logger.error("Failed to save availability settings:", error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-  }
+  // Using centralized formatDate function from time-utils.ts
 
   if (isLoading) {
     return (

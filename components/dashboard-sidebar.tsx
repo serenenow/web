@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { STORAGE_KEYS, clearAllStorage } from "@/lib/utils/secure-storage"
 
 const navigationItems = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -47,10 +48,8 @@ function SidebarContent({ user, onNavigate }: { user: DashboardSidebarProps["use
 
   const handleLogout = () => {
     try {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("auth_token")
-        localStorage.removeItem("setup_complete")
-      }
+      // Use clearAllStorage to clear all storage data (both secure and plain)
+      clearAllStorage()
       router.push("/login")
     } catch (error) {
       console.error("Logout error:", error)

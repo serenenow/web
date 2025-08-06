@@ -63,7 +63,10 @@ export default function ClientRegistrationPage() {
   const { setClientResponseData } = useClientData()
 
   useEffect(() => {
-        // Get the code from URL params
+    // Check if searchParams exists before trying to access it
+    if (!searchParams) return
+    
+    // Get the code from URL params
     const code = searchParams.get("clientCode")
 
     if (code) {
@@ -229,7 +232,6 @@ export default function ClientRegistrationPage() {
       })
 
       // Proceed to service selection or booking
-      
       router.push(`/book/${bookingData.expertProfile.id}?clientCode=${clientCode}`)
     } catch (error: any) {
       console.error("Profile update error:", error)

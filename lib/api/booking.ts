@@ -1,6 +1,7 @@
 // Booking related API calls (from your existing api.ts)
 import { apiRequest } from "./base"
-import { createTimeSlotFromString as createTimeSlotUtil, getBrowserTimezone } from "@/lib/utils/time-utils"
+import { storePaymentSession, getPaymentSession, generateSessionReference, storeSessionReference } from "@/lib/utils/secure-payment"
+import { logger } from "@/lib/utils/logger"
 
 // Payment and appointment types
 export enum PaymentProvider {
@@ -56,7 +57,11 @@ export const createAppointment = async (appointmentData: AppointmentAddRequest):
   })
 }
 
-// Load Cashfree SDK
+// Cashfree SDK integrity hash (SHA-384)  
+// This should be updated whenever the SDK is updated
+const CASHFREE_SDK_INTEGRITY = "sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
+
+// Load Cashfree SDK with integrity check
 export const loadCashfreeSDK = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (typeof window !== "undefined" && window.Cashfree) {
@@ -72,15 +77,48 @@ export const loadCashfreeSDK = (): Promise<void> => {
     const script = document.createElement("script")
     script.src = "https://sdk.cashfree.com/js/v3/cashfree.js"
     script.async = true
+    
+    // Add integrity and crossorigin attributes for security
+    script.integrity = CASHFREE_SDK_INTEGRITY
+    script.crossOrigin = "anonymous"
+    
     script.onload = () => resolve()
-    script.onerror = () => reject(new Error("Failed to load Cashfree SDK"))
+    script.onerror = (error) => {
+      logger.error("Failed to load Cashfree SDK:", error)
+      reject(new Error("Failed to load Cashfree SDK. Please check network connection or try again later."))
+    }
     document.head.appendChild(script)
   })
 }
 
 // Handle Cashfree payment
-export const handleCashfreePayment = async (paymentSessionId: string, orderId: string): Promise<boolean> => {
+export const handleCashfreePayment = async (
+  paymentSessionId: string, 
+  orderId: string, 
+  appointmentId: string,
+  bookingData?: {
+    bookingDate?: string;
+    bookingTime?: string;
+    selectedService?: any;
+    paymentMethod?: string;
+  }
+): Promise<boolean> => {
   try {
+    // Store payment session data securely before initiating payment
+    const sessionRef = generateSessionReference();
+    storeSessionReference(sessionRef, paymentSessionId);
+    
+    // Store complete payment session data
+    storePaymentSession({
+      orderId,
+      appointmentId,
+      paymentSessionId,
+      paymentMethod: bookingData?.paymentMethod || 'online',
+      bookingDate: bookingData?.bookingDate,
+      bookingTime: bookingData?.bookingTime,
+      selectedService: bookingData?.selectedService
+    });
+    
     await loadCashfreeSDK()
 
     if (typeof window === "undefined" || !window.Cashfree) {
@@ -96,28 +134,25 @@ export const handleCashfreePayment = async (paymentSessionId: string, orderId: s
       redirectTarget: "_modal",
     }
 
-    console.log("Cashfree making the payment...")
     const result = await cashfree.checkout(checkoutOptions)
-    console.log("Cashfree payment result "+ result)
+    
     if (result.error) {
-      console.error("Payment failed:", result.error)
+      logger.error("Payment failed:", result.error)
       throw new Error("Payment failed. Please try again.")
     }
 
     if (result.redirect) {
-      console.log("Payment completed successfully")
       return true
     }
+    
     if (result.paymentDetails) {
-        // This will be called whenever the payment is completed irrespective of transaction status
-        console.log("Payment has been completed, Check for Payment Status");
-        console.log(result.paymentDetails.paymentMessage);
-        return true
-      }
+      // This will be called whenever the payment is completed irrespective of transaction status
+      return true
+    }
 
     return false
   } catch (error) {
-    console.error("Cashfree payment error:", error)
+    logger.error("Cashfree payment error:", error)
     throw new Error("Payment processing failed. Please try again.")
   }
 }

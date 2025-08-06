@@ -97,6 +97,9 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
 
   // Load booking data when expertId and clientCode are available
   useEffect(() => {
+    // Check if searchParams exists before trying to access it
+    if (!searchParams) return
+    
     const code = searchParams.get("clientCode")
     if (!code) {
       setError("Missing client code. Please use a valid booking link.")
@@ -274,9 +277,18 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
     handleStepComplete("date", date)
   }
 
-  const handleTimeSelect = (time: string) => {
+  const handleTimeSelect = (time: string, timeSlot?: any) => {
     setSelectedTime(time)
-    handleStepComplete("time", time)
+    // If we have the timeSlot object with UTC times, include them in the step data
+    if (timeSlot && timeSlot.startTimeUtc && timeSlot.endTimeUtc) {
+      handleStepComplete("time", {
+        time,
+        startTimeUtc: timeSlot.startTimeUtc,
+        endTimeUtc: timeSlot.endTimeUtc
+      })
+    } else {
+      handleStepComplete("time", time)
+    }
   }
 
   const handleBooking = async () => {
@@ -289,15 +301,24 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
     setBookingError(null)
 
     try {
+      // Check if we have UTC times in the step data
+      const timeData = stepStatus.time.data
+      const hasUtcTimes = timeData && typeof timeData === 'object' && timeData.startTimeUtc && timeData.endTimeUtc
+      
       const result = await processAuthenticatedBooking({
         clientId: bookingData.clientResponse.client.id,
         expertId: expertId,
         serviceId: selectedService.id,
         selectedService,
         date: selectedDate,
-        time: selectedTime,
+        time: selectedTime as string,
         timezone,
         paymentMode,
+        // Include UTC times if available
+        ...(hasUtcTimes && {
+          startTimeUtc: timeData.startTimeUtc,
+          endTimeUtc: timeData.endTimeUtc
+        })
       })
 
       if (result.success) {
@@ -681,7 +702,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
                       {availableTimeSlots.map((timeSlot) => (
                         <button
                           key={timeSlot.time}
-                          onClick={() => handleTimeSelect(timeSlot.time)}
+                          onClick={() => handleTimeSelect(timeSlot.time, timeSlot)}
                           disabled={!timeSlot.available}
                           className={`p-3 rounded-lg border text-center transition-colors ${
                             selectedTime === timeSlot.time

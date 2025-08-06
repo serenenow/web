@@ -23,6 +23,9 @@ export default function VerifyCodePage() {
   const { toast } = useToast()
 
   useEffect(() => {
+    // Check if searchParams exists before trying to access it
+    if (!searchParams) return
+    
     const emailParam = searchParams.get("email")
     if (emailParam) {
       setEmail(emailParam)

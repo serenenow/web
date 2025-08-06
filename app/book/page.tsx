@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import { validateClientCode } from "@/lib/services/client-code-service"
 import { useClientData } from "@/hooks/use-client-data"
+import { logger } from "@/lib/utils/logger"
 
 export default function BookingCodeEntry() {
   const [clientCode, setClientCode] = useState("")
@@ -35,21 +36,11 @@ export default function BookingCodeEntry() {
         // Redirect to client registration
         router.push(`/book/register?code=${clientCode}`)
       } else {
-        // Existing client with complete profile - check if multiple services
-        if (result.services.length > 1) {
-          // Multiple services - show service selection
-          router.push(`/book/services?code=${clientCode}`)
-        } else if (result.services.length === 1) {
-          // Single service - go directly to booking
-          router.push(`/book/${result.expert.id}/${result.services[0].id}?code=${clientCode}`)
-        } else {
-          setError("No services available for this code")
-          console.error("No services available for this code")
-        }
+          router.push(`/book/${result.expertProfile.id}?clientCode=${clientCode}`)
       }
     } catch (err) {
       // Error is handled by the hook
-      console.error("Code validation failed:", err)
+      logger.error("Code validation failed:", err)
       setError("Code validation failed: " + err)
     }
   }

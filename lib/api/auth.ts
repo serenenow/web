@@ -1,4 +1,6 @@
 // Authentication related API calls
+import { Store } from "lucide-react"
+import { STORAGE_KEYS } from "../utils/secure-storage"
 import { apiRequest } from "./base"
 import type { ExpertDto } from "./users"
 
@@ -38,34 +40,33 @@ export async function verifyCode(email: string, code: string): Promise<ExpertRes
 // Token management functions
 export function setAuthToken(token: string): void {
   if (typeof window !== "undefined") {
-    console.log('Saving auth token:', token);
-    localStorage.setItem("auth_token", token)
+    localStorage.setItem(STORAGE_KEYS.EXPERT_AUTH_TOKEN, token)
   }
 }
 
 export function getAuthToken(): string | null {
   if (typeof window !== "undefined") {
-    return localStorage.getItem("auth_token")
+    return localStorage.getItem(STORAGE_KEYS.EXPERT_AUTH_TOKEN)
   }
   return null
 }
 
 export function removeAuthToken(): void {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("auth_token")
-    localStorage.removeItem("expert_data")
+    localStorage.removeItem(STORAGE_KEYS.EXPERT_AUTH_TOKEN)
+    localStorage.removeItem(STORAGE_KEYS.EXPERT_DATA)
   }
 }
 
 export function setExpertData(expert: ExpertDto): void {
   if (typeof window !== "undefined") {
-    localStorage.setItem("expert_data", JSON.stringify(expert))
+    localStorage.setItem(STORAGE_KEYS.EXPERT_DATA, JSON.stringify(expert))
   }
 }
 
 export function getExpertData(): ExpertDto | null {
   if (typeof window !== "undefined") {
-    const data = localStorage.getItem("expert_data")
+    const data = localStorage.getItem(STORAGE_KEYS.EXPERT_DATA)
     return data ? JSON.parse(data) : null
   }
   return null

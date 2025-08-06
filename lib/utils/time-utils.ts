@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns"
 import { formatInTimeZone, getTimezoneOffset } from "date-fns-tz"
+import { logger } from "./logger"
 
 /**
  * TimeZone information interface
@@ -79,11 +80,40 @@ export const legacyTimezones = [
  * @returns Time in 12-hour format
  */
 export const formatTime12Hour = (time24: string): string => {
-  const [hours, minutes] = time24.split(":")
-  const hour = Number.parseInt(hours, 10)
-  const period = hour >= 12 ? "PM" : "AM"
-  const hour12 = hour % 12 || 12
-  return `${hour12}:${minutes} ${period}`
+  try {
+    // Parse the 24-hour time
+    const [hours, minutes] = time24.split(":").map(Number)
+    
+    // Convert to 12-hour format
+    const period = hours >= 12 ? "PM" : "AM"
+    const hours12 = hours % 12 || 12 // Convert 0 to 12 for 12 AM
+    
+    return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`
+  } catch (error) {
+    return time24 // Return original if parsing fails
+  }
+}
+
+/**
+ * Format time string for display
+ * @param timeString Time string (e.g., "10:00" or "10:00:00")
+ * @param use12Hour Whether to convert to 12-hour format
+ * @returns Formatted time string or fallback message if timeString is undefined
+ */
+export const formatTime = (timeString?: string, use12Hour: boolean = true): string => {
+  if (!timeString) return "Time to be confirmed"
+  
+  try {
+    // Handle different time formats
+    const timePart = timeString.includes("T") 
+      ? timeString.split("T")[1].substring(0, 5) // Extract HH:MM from ISO string
+      : timeString.substring(0, 5); // Take first 5 chars (HH:MM) from time string
+    
+    return use12Hour ? formatTime12Hour(timePart) : timePart;
+  } catch (error) {
+    logger.error('Error formatting time:', error);
+    return timeString;
+  }
 }
 
 /**
@@ -111,7 +141,7 @@ export const convertTimeToTimezone = (isoTime: string, targetTimezone: string): 
     // Format the ISO time string directly to the target timezone
     return formatInTimeZone(parseISO(isoTime), targetTimezone, 'HH:mm')
   } catch (error) {
-    console.error('Error converting time:', error)
+    logger.error('Error converting time:', error)
     // Fallback to extracting time directly from string
     return isoTime.substring(11, 16)
   }
@@ -156,7 +186,7 @@ export const convertTimeToUTC = (timeStr: string, dateStr: string, sourceTimezon
     const isoString = utcDate.toISOString()
     return isoString.substring(0, 19) // Remove milliseconds and Z suffix
   } catch (error) {
-    console.error('Error converting time to UTC:', error)
+    logger.error('Error converting time to UTC:', error)
     // Fallback without Z suffix
     return `${dateStr}T${timeStr}:00`
   }
@@ -193,12 +223,41 @@ export const createTimeSlotFromString = (
  * @param formatStr Format string for date-fns
  * @returns Formatted date string
  */
-export const formatDate = (dateStr: string, formatStr: string = 'MMM d, yyyy'): string => {
+/**
+ * Format a date string for display
+ * @param dateStr Date string in YYYY-MM-DD format or ISO format
+ * @param formatStr Format string for date-fns (default: 'MMM d, yyyy')
+ * @param localeOptions Locale options for toLocaleDateString (if useLocale is true)
+ * @param useLocale Whether to use toLocaleDateString instead of date-fns format
+ * @returns Formatted date string
+ */
+export const formatDate = (
+  dateStr?: string, 
+  formatStr: string = 'MMM d, yyyy',
+  localeOptions?: Intl.DateTimeFormatOptions,
+  useLocale: boolean = false
+): string => {
+  if (!dateStr) return "Date to be confirmed";
+  
   try {
-    return format(parseISO(dateStr), formatStr)
+    const date = parseISO(dateStr);
+    
+    if (useLocale) {
+      // Use locale-based formatting (for consistent UI across the app)
+      const options: Intl.DateTimeFormatOptions = localeOptions || {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      };
+      return date.toLocaleDateString("en-US", options);
+    }
+    
+    // Use date-fns formatting (more flexible for specific formats)
+    return format(date, formatStr);
   } catch (error) {
-    console.error('Error formatting date:', error)
-    return dateStr
+    logger.error('Error formatting date:', error);
+    return dateStr;
   }
 }
 
@@ -210,7 +269,7 @@ export const getBrowserTimezone = (): string => {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone
   } catch (error) {
-    console.error('Error getting browser timezone:', error)
+    logger.error('Error getting browser timezone:', error)
     return 'Asia/Kolkata' // Default to IST
   }
 }
@@ -242,7 +301,7 @@ export const getTimezoneOffsetString = (timezoneId: string): string => {
     const sign = offsetMinutes >= 0 ? '+' : '-'
     return `${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
   } catch (error) {
-    console.error(`Error getting timezone offset for ${timezoneId}:`, error)
+    logger.error(`Error getting timezone offset for ${timezoneId}:`, error)
     return ''
   }
 }

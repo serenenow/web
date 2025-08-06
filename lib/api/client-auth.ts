@@ -1,6 +1,7 @@
 // Client authentication related API calls and storage
 import { apiRequest } from "./base"
 import type { Client } from "./client"
+import { plainLocalStorage, STORAGE_KEYS } from "@/lib/utils/secure-storage"
 
 export interface ClientDto {
   id: string
@@ -33,61 +34,46 @@ export interface ClientResponse {
 }
 
 /**
- * Store client authentication token in localStorage
+ * Store client authentication token securely with expiration
  */
 export function setClientAuthToken(token: string): void {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("client_auth_token", token)
-  }
+  plainLocalStorage.setItem(STORAGE_KEYS.CLIENT_AUTH_TOKEN, token)
 }
 
 /**
- * Get client authentication token from localStorage
+ * Get client authentication token from secure storage
  */
 export function getClientAuthToken(): string | null {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("client_auth_token")
-  }
-  return null
+  return plainLocalStorage.getItem<string>(STORAGE_KEYS.CLIENT_AUTH_TOKEN)
 }
 
 /**
- * Remove client authentication token from localStorage
+ * Remove client authentication token from secure storage
  */
 export function removeClientAuthToken(): void {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("client_auth_token")
-  }
+  plainLocalStorage.removeItem(STORAGE_KEYS.CLIENT_AUTH_TOKEN)
 }
 
 /**
- * Store client data in localStorage
+ * Store client data in secure storage
  */
 export function setClientData(client: ClientDto): void {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("client_data", JSON.stringify(client))
-  }
+  plainLocalStorage.setItem(STORAGE_KEYS.CLIENT_DATA, client)
 }
 
 /**
- * Get client data from localStorage
+ * Get client data from secure storage
  */
 export function getClientData(): ClientDto | null {
-  if (typeof window !== "undefined") {
-    const data = localStorage.getItem("client_data")
-    return data ? JSON.parse(data) : null
-  }
-  return null
+  return plainLocalStorage.getItem<ClientDto>(STORAGE_KEYS.CLIENT_DATA)
 }
 
 /**
- * Store complete client response (token + data) in localStorage
+ * Store complete client response (token + data) in secure storage
  */
 export function setClientResponse(response: ClientResponse): void {
-  if (typeof window !== "undefined") {
-    setClientAuthToken(response.accessToken)
-    setClientData(response.client)
-  }
+  setClientAuthToken(response.accessToken)
+  setClientData(response.client)
 }
 
 /**
@@ -96,6 +82,6 @@ export function setClientResponse(response: ClientResponse): void {
 export function clearClientData(): void {
   if (typeof window !== "undefined") {
     removeClientAuthToken()
-    localStorage.removeItem("client_data")
+    plainLocalStorage.removeItem(STORAGE_KEYS.CLIENT_DATA)
   }
 }

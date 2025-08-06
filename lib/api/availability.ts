@@ -45,6 +45,9 @@ export interface FormattedTimeSlot {
   time: string
   available: boolean
   timezone: string
+  // Original UTC times from API
+  startTimeUtc: string
+  endTimeUtc: string
 }
 
 export interface FormattedAvailableSlots {
@@ -102,7 +105,10 @@ function formatTimeSlots(timeSlots: TimeSlot[]): FormattedTimeSlot[] {
     return {
       time: formattedTime,
       available: true, // Assume all returned slots are available
-      timezone: getBrowserTimezone(), // Use browser's timezone
+      timezone: "UTC", // All times from API are in UTC
+      // Store original UTC times from API
+      startTimeUtc: slot.startTime,
+      endTimeUtc: slot.endTime as string
     }
   })
 }

@@ -1,4 +1,8 @@
 // Base API configuration and utilities
+import { addCSRFToken } from "@/lib/utils/csrf-protection"
+import { logger } from "@/lib/utils/logger"
+import { processApiResponse, handleFetchError, ApiResponse } from "@/lib/utils/api-response"
+import { STORAGE_KEYS } from "@/lib/utils/secure-storage"
 
 /**
  * Converts a camelCase string to snake_case
@@ -74,8 +78,8 @@ export function convertKeysToCamelCase(obj: any): any {
 }
 
 export const API_ENVIRONMENTS = {
-  LOCAL: "http://localhost:8080/serenenow/api",
-  PROD: "http://localhost:8080/serenenow/api",
+  LOCAL: "http://localhost:8080/serenenow/api/v1",
+  PROD: "https://kmp-production.up.railway.app/serenenow/api/v1", // Updated to use HTTPS and proper production domain
 }
 
 export type ApiEnvironment = keyof typeof API_ENVIRONMENTS
@@ -102,121 +106,129 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Make an API request with standardized error handling and response processing
+ * @param endpoint API endpoint path (will be appended to API_BASE_URL)
+ * @param options Fetch request options
+ * @returns Processed API response data converted to camelCase
+ */
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
-
+  
+  // Log API request in debug mode
   if (API_DEBUG) {
-    console.log(`API Request: ${options.method || "GET"} ${url}`)
-    if (options.body) {
-      console.log("Request Body:", options.body)
-    }
-    console.log("Request Headers:", options.headers)
-  }
-
-  // Create headers object
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string> || {}),
+    logger.debug(`API Request: ${url}`);
   }
   
-  // Add authorization token for non-auth endpoints
-  if (!endpoint.includes("/auth/")) {
-    // Check for client token first (for client-specific endpoints)
-    const clientToken = typeof window !== "undefined" ? localStorage.getItem("client_auth_token") : null
-    // Fall back to expert token if no client token
-    const expertToken = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
-    
-    if (clientToken) {
-      headers["Authorization"] = `Bearer ${clientToken}`
-    } else if (expertToken) {
-      headers["Authorization"] = `Bearer ${expertToken}`
-    }
+  // Security check: Warn about non-HTTPS URLs in production
+  if (process.env.NODE_ENV === 'production' && !url.startsWith('https://')) {
+    logger.error('Security warning: Using non-HTTPS URL in production:', url)
   }
 
+  // Default headers
+  const headers = new Headers(options.headers || {})
+  
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json")
+  }
+  
+  // Add authentication token if available
+  if (typeof window !== 'undefined') {
+    // Check for expert auth token (stored directly in localStorage)
+    const expertAuthToken = localStorage.getItem(STORAGE_KEYS.EXPERT_AUTH_TOKEN);
+    
+    // Check for client auth token (also in localStorage)
+    const clientAuthToken = localStorage.getItem(STORAGE_KEYS.CLIENT_AUTH_TOKEN);
+    
+    // Add the appropriate token to Authorization header
+    const token = clientAuthToken || expertAuthToken;
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
+      if (API_DEBUG) {
+        logger.debug('Added authentication token to request');
+      }
+    }
+  }
+  
+  // Add CSRF token to headers for non-GET requests
+  if (options.method && options.method !== "GET") {
+    addCSRFToken(headers)
+  }
+
+  // Merge default options with provided options
   const config: RequestInit = {
-    headers,
     ...options,
+    headers,
+    credentials: "include", // Include cookies for cross-origin requests
+  }
+
+  if (API_DEBUG) {
+    logger.debug(`API Request: ${options.method || "GET"} ${url}`)
+    logger.debug("Request Headers:", Object.fromEntries([...headers.entries()]))
+    
+    if (options.body) {
+      logger.debug("Request Body:", options.body)
+    }
   }
 
   try {
-    // Convert request body from camelCase to snake_case if it exists
-    if (config.body && typeof config.body === 'string') {
+    // Convert request body from camelCase to snake_case if it's JSON
+    if (config.body && typeof config.body === "string" && headers.get("Content-Type")?.includes("application/json")) {
       try {
-        const bodyObj = JSON.parse(config.body);
-        const snakeCaseBody = convertKeysToSnakeCase(bodyObj);
-        config.body = JSON.stringify(snakeCaseBody);
+        const bodyObj = JSON.parse(config.body)
+        const snakeCaseBody = convertKeysToSnakeCase(bodyObj)
+        config.body = JSON.stringify(snakeCaseBody)
         
         if (API_DEBUG) {
-          console.log('Converted Request Body:', config.body);
+          logger.debug('Converted Request Body:', config.body);
         }
       } catch (e) {
         // If parsing fails, leave the body as is
-        console.warn('Could not convert request body to snake_case:', e);
+        logger.warn('Could not convert request body to snake_case:', e);
       }
     }
     
+    // Make the API request
     const response = await fetch(url, config)
-
+    
+    // Use centralized API response processing
+    const apiResponse = await processApiResponse<T>(response);
+    
     if (API_DEBUG) {
-      console.log(`Response Status: ${response.status} ${response.statusText}`)
-      console.log("Response Headers:", Object.fromEntries([...response.headers.entries()]))
-    }
-
-    if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`
-
-      try {
-        const errorData = await response.json()
-        if (errorData.message) {
-          errorMessage = errorData.message
-        } else if (errorData.error) {
-          errorMessage = errorData.error
-        }
-      } catch (e) {
-        // If we can't parse the error response, use the default message
+      logger.debug(`Response Status: ${apiResponse.status} ${response.statusText}`)
+      logger.debug("Response Success:", apiResponse.success)
+      if (apiResponse.error) {
+        logger.debug("Response Error:", apiResponse.error)
       }
-
-      throw new Error(errorMessage)
     }
-
-    // Handle empty responses (like 204 No Content)
-    const contentType = response.headers.get("content-type")
-    console.log("Content type: "+ contentType)
     
-    // If we get HTML when expecting JSON, it might be an error page
-    if (contentType && contentType.includes("text/html")) {
-      console.warn("Received HTML response when expecting JSON. This might indicate an error.")
-      const textResponse = await response.text()
-      console.log("HTML Response Preview:", textResponse.substring(0, 200) + "...")
-      // Continue processing as if empty response
+    // If the response was not successful, throw an error
+    if (!apiResponse.success) {
+      throw new Error(apiResponse.error?.message || `HTTP ${apiResponse.status}: ${response.statusText}`)
+    }
+    
+    // If there's no data, return an empty object
+    if (!apiResponse.data) {
       return {} as T
     }
     
-    if (!contentType || !contentType.includes("application/json")) {
-      console.log("Non-JSON content type, returning empty object")
-      return {} as T
-    }
-
-    const data = await response.json()
-
     // Convert response data from snake_case to camelCase
-    const camelCaseData = convertKeysToCamelCase(data)
-
+    const camelCaseData = convertKeysToCamelCase(apiResponse.data)
+    
     if (API_DEBUG) {
-      console.log("Response Data (Original):", data)
-      console.log("Response Data (CamelCase):", camelCaseData)
+      logger.debug("Response Data (Original):", apiResponse.data)
+      logger.debug("Response Data (CamelCase):", camelCaseData)
     }
-
+    
     return camelCaseData
   } catch (error) {
+    // Use centralized fetch error handling
+    const errorResponse = handleFetchError(error);
+    
     if (API_DEBUG) {
-      console.error("API Error:", error)
+      logger.error("API Error:", errorResponse.error)
     }
-
-    if (error instanceof TypeError && error.message.includes("fetch")) {
-      throw new Error("Network error occurred. Please check your connection and try again.")
-    }
-
-    throw error
+    
+    throw new Error(errorResponse.error?.message || "An unknown error occurred")
   }
 }

@@ -1,6 +1,7 @@
 // Dashboard related API calls
 import { apiRequest } from "./base"
-import { ExpertDto, ServiceDto, ExpertAppointment } from "./users"
+import { ExpertDto, ServiceDto } from "./users"
+import { type ExpertAppointment } from "./appointments"
 
 export interface DashboardData {
   services: ServiceDto[]

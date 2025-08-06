@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { CheckCircle, Calendar, Clock, MapPin, User, IndianRupee, ArrowLeft, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import type { ServiceDetailDto } from "@/lib/api/service"
 import { VerifyCodeResponse, getCachedBookingData } from "@/lib/services/client-code-service"
+import { getPaymentSession, clearPaymentSession } from "@/lib/utils/secure-payment"
+import { formatDate, formatTime } from "@/lib/utils/time-utils"
+import { STORAGE_KEYS } from "@/lib/utils/secure-storage"
 
 interface BookingSuccessData {
   orderId?: string
@@ -23,53 +26,40 @@ export default function BookingSuccessPage() {
   const [successData, setSuccessData] = useState<BookingSuccessData>({})
   const [loading, setLoading] = useState(true)
 
-  const searchParams = useSearchParams()
   const router = useRouter()
 
   useEffect(() => {
-    // Get success data from URL params or sessionStorage
-    const orderId = searchParams.get("orderId")
-    const appointmentId = searchParams.get("appointmentId")
-
-    const storedSuccessData = sessionStorage.getItem("bookingSuccessData")
+    // Get success data from secure storage instead of URL params
+    const paymentSession = getPaymentSession()
     
-    if (storedSuccessData) {
-      const successInfo = JSON.parse(storedSuccessData) as BookingSuccessData
+    if (paymentSession) {
+      // Use data from secure storage
       setSuccessData({
-        ...successInfo,
-        orderId: orderId || successInfo.orderId,
-        appointmentId: appointmentId || successInfo.appointmentId,
+        orderId: paymentSession.orderId,
+        appointmentId: paymentSession.appointmentId,
+        paymentMethod: paymentSession.paymentMethod,
+        bookingDate: paymentSession.bookingDate,
+        bookingTime: paymentSession.bookingTime,
+        selectedService: paymentSession.selectedService,
       })
+      
+      // Clear payment session after retrieving data
+      // This ensures the data is only used once
+      clearPaymentSession()
     } else {
-      setSuccessData({
-        orderId: orderId || undefined,
-        appointmentId: appointmentId || undefined,
-      })
+      // Fallback for backward compatibility
+      const storedSuccessData = sessionStorage.getItem(STORAGE_KEYS.BOOKING_SUCCESS_DATA)
+      
+      if (storedSuccessData) {
+        const successInfo = JSON.parse(storedSuccessData) as BookingSuccessData
+        setSuccessData(successInfo)
+        // Remove from session storage after use
+        sessionStorage.removeItem(STORAGE_KEYS.BOOKING_SUCCESS_DATA)
+      }
     }
 
     setLoading(false)
-  }, [searchParams])
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "Date to be confirmed"
-
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString("en-IN", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    } catch {
-      return dateString
-    }
-  }
-
-  const formatTime = (timeString?: string) => {
-    if (!timeString) return "Time to be confirmed"
-    return timeString
-  }
+  }, [])
 
   const formatDuration = (minutes?: number) => {
     if (!minutes) return "Duration TBD"
