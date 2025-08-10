@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import CSRFInitializer from '@/components/security/csrf-initializer'
 
 export const metadata: Metadata = {
   title: 'SereneNow - Mental Health Care Platform',
@@ -18,6 +19,8 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.png" />
       </head>
       <body className="min-h-screen bg-gray-50">
+        {/* Initialize CSRF protection */}
+        <CSRFInitializer />
         <div className="flex min-h-screen flex-col">
           <main className="flex-1">{children}</main>
         </div>

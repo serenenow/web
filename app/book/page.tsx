@@ -8,38 +8,40 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
-import { useBooking } from "@/hooks/use-booking"
+import { validateClientCode } from "@/lib/services/client-code-service"
+import { useClientData } from "@/hooks/use-client-data"
+import { logger } from "@/lib/utils/logger"
 
 export default function BookingCodeEntry() {
   const [clientCode, setClientCode] = useState("")
   const router = useRouter()
-  const { validateCode, loading, error } = useBooking()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const { setClientResponseData } = useClientData()
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setLoading(true)
     e.preventDefault()
     if (clientCode.length !== 6) return
 
     try {
-      const result = await validateCode(clientCode)
+      const result = await validateClientCode(clientCode)
+      
+      setLoading(false)
+      // Store the client response data using our centralized approach
+      setClientResponseData(result.clientResponse)
 
-      if (result.valid && result.therapist && result.service) {
-        // Store the validated data in sessionStorage for the booking page
-        sessionStorage.setItem(
-          "bookingData",
-          JSON.stringify({
-            client: result.client,
-            therapist: result.therapist,
-            service: result.service,
-            code: clientCode,
-          }),
-        )
-
-        // Redirect to booking page
-        router.push(`/book/${result.therapist.id}/${result.service.id}?code=${clientCode}`)
+      // Check if client needs to complete profile setup
+      if (!result.clientResponse.hasSetupProfile) {
+        // Redirect to client registration
+        router.push(`/book/register?code=${clientCode}`)
+      } else {
+          router.push(`/book/${result.expertProfile.id}?clientCode=${clientCode}`)
       }
     } catch (err) {
       // Error is handled by the hook
-      console.error("Code validation failed:", err)
+      logger.error("Code validation failed:", err)
+      setError("Code validation failed: " + err)
     }
   }
 
