@@ -79,7 +79,7 @@ export function convertKeysToCamelCase(obj: any): any {
 
 export const API_ENVIRONMENTS = {
   LOCAL: "http://localhost:8080/serenenow/api/v1",
-  PROD: "https://kmp-production.up.railway.app/serenenow/api/v1", // Updated to use HTTPS and proper production domain
+  PROD: "/api/proxy", // Use Next.js API proxy to handle cross-origin cookies
 }
 
 export type ApiEnvironment = keyof typeof API_ENVIRONMENTS
@@ -165,6 +165,12 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
   if (API_DEBUG) {
     logger.debug(`API Request: ${options.method || "GET"} ${url}`)
     logger.debug("Request Headers:", Object.fromEntries([...headers.entries()]))
+    
+    // Debug cookies being sent
+    if (typeof window !== 'undefined') {
+      logger.debug("Document cookies:", document.cookie)
+      logger.debug("Credentials mode:", config.credentials)
+    }
     
     if (options.body) {
       logger.debug("Request Body:", options.body)
