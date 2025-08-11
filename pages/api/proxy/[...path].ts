@@ -3,14 +3,25 @@ import { NextApiRequest, NextApiResponse } from 'next'
 const API_BASE_URL = 'https://kmp-production.up.railway.app/serenenow/api/v1'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { path } = req.query
+  const { path, ...queryParams } = req.query
   const endpoint = Array.isArray(path) ? path.join('/') : path
 
   if (!endpoint) {
     return res.status(400).json({ error: 'Missing API path' })
   }
 
-  const url = `${API_BASE_URL}/${endpoint}`
+  // Build URL with query parameters
+  const baseUrl = `${API_BASE_URL}/${endpoint}`
+  const url = new URL(baseUrl)
+  
+  // Add all query parameters except 'path'
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      value.forEach(v => url.searchParams.append(key, v))
+    } else if (value) {
+      url.searchParams.append(key, value)
+    }
+  })
 
   try {
     // Forward all headers except host
@@ -26,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       forwardHeaders['cookie'] = req.headers.cookie
     }
 
-    const response = await fetch(url, {
+    const response = await fetch(url.toString(), {
       method: req.method,
       headers: forwardHeaders,
       body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
