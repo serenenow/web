@@ -1,5 +1,5 @@
 import { apiRequest } from "./base"
-import { getBrowserTimezone } from "../utils/time-utils"
+import { getBrowserTimezone, formatTime12Hour } from "../utils/time-utils"
 
 /**
  * Enum for days of the week (1-7, Monday to Sunday)
@@ -98,14 +98,13 @@ function formatTimeSlots(timeSlots: TimeSlot[]): FormattedTimeSlot[] {
     const hours = startTime.getHours()
     const minutes = startTime.getMinutes()
 
-    // Format as 24-hour time (e.g., "09:00") for internal use
-    // The UI will format it to 12-hour format using formatTime12Hour
-    const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+    // Format as 24-hour time to 12-hour for display
+    const formattedTime = formatTime12Hour(`${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`)
 
     return {
       time: formattedTime,
       available: true, // Assume all returned slots are available
-      timezone: "UTC", // All times from API are in UTC
+      timezone: getBrowserTimezone(), // Show times in browser timezoner
       // Store original UTC times from API
       startTimeUtc: slot.startTime,
       endTimeUtc: slot.endTime as string

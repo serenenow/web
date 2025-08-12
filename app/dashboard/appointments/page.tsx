@@ -12,6 +12,7 @@ import {
   approveAppointment,
   declineAppointment,
   type ExpertAppointment,
+  fetchAllAppointments,
 } from "@/lib/api/appointments"
 import { getExpertData } from "@/lib/api/auth"
 import { format, parseISO } from "date-fns"
@@ -31,7 +32,7 @@ export default function AppointmentsPage() {
     try {
       await approveAppointment(appointmentId)
       // Refresh appointments
-      const data = await fetchUpcomingAppointments()
+      const data = await fetchAllAppointments()
       setAppointments(data)
     } catch (error) {
       console.error("Error approving appointment:", error)
@@ -42,7 +43,7 @@ export default function AppointmentsPage() {
     try {
       await declineAppointment(appointmentId)
       // Refresh appointments
-      const data = await fetchUpcomingAppointments()
+      const data = await fetchAllAppointments()
       setAppointments(data)
     } catch (error) {
       console.error("Error declining appointment:", error)
@@ -63,7 +64,7 @@ export default function AppointmentsPage() {
     const loadAppointments = async () => {
       try {
         setLoading(true)
-        const data = await fetchUpcomingAppointments()
+        const data = await fetchAllAppointments()
         setAppointments(data)
         setError(null)
       } catch (err) {
@@ -88,7 +89,7 @@ export default function AppointmentsPage() {
       service: appointment.service.title,
       date: format(startDate, "MMM d, yyyy"),
       time: `${format(startDate, "h:mm a")} - ${format(endDate, "h:mm a")}`,
-      status: appointment.status.toLowerCase() === "pending" ? "needs_approval" : appointment.status.toLowerCase(),
+      status: appointment.status,
       meetingLink: appointment.meetingLink || null,
       notes: appointment.notes || "",
     }
@@ -101,9 +102,9 @@ export default function AppointmentsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "confirmed":
+      case "SCHEDULED":
         return "bg-mint/20 text-mint-dark"
-      case "needs_approval":
+      case "NEEDS_APPROVAL":
         return "bg-yellow-100 text-yellow-800"
       default:
         return "bg-gray-100 text-gray-600"

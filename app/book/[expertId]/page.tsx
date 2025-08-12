@@ -7,14 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { validateClientCode, getCachedBookingData, type VerifyCodeResponse } from "@/lib/services/client-code-service"
 import { processAuthenticatedBooking } from "@/lib/services/booking-service"
-import { apiRequest } from "@/lib/api/base"
 import { getAvailableSlots } from "@/lib/api/availability"
 import type { ServiceDetailDto } from "@/lib/api/service"
+import { setClientAuthToken } from "@/lib/api/client-auth"
 import {
   timezones,
   getBrowserTimezone,
   getTimezoneDisplayWithOffset,
-  formatTime12Hour,
   formatDate,
   convertTimeToTimezone,
 } from "@/lib/utils/time-utils"
@@ -124,6 +123,8 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
         // If no cached data, validate the code
         data = await validateClientCode(clientCode)
       }
+
+      setClientAuthToken(data.clientResponse.accessToken)
 
       // Check if profile is set up
       if (!data.clientResponse.hasSetupProfile) {
@@ -314,11 +315,8 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
         time: selectedTime as string,
         timezone,
         paymentMode,
-        // Include UTC times if available
-        ...(hasUtcTimes && {
-          startTimeUtc: timeData.startTimeUtc,
-          endTimeUtc: timeData.endTimeUtc
-        })
+        startTimeUtc: timeData.startTimeUtc,
+        endTimeUtc: timeData.endTimeUtc
       })
 
       if (result.success) {
@@ -470,9 +468,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
                       <p className="font-medium text-charcoal">Date & Time</p>
                       <p className="text-charcoal/70">
                         {formatDate(selectedDate)} at{" "}
-                        {selectedTime.includes("AM") || selectedTime.includes("PM")
-                          ? selectedTime
-                          : formatTime12Hour(selectedTime)}
+                        {selectedTime}
                       </p>
                       <p className="text-charcoal/70">{getTimezoneDisplayWithOffset(timezone)}</p>
                     </div>
@@ -712,9 +708,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
                                 : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
                           }`}
                         >
-                          {timeSlot.time.includes("AM") || timeSlot.time.includes("PM")
-                            ? timeSlot.time
-                            : formatTime12Hour(timeSlot.time)}
+                          {timeSlot.time}
                         </button>
                       ))}
                     </div>
@@ -724,9 +718,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
                 {stepStatus.time.completed && currentStep !== "time" && (
                   <div className="text-sm text-charcoal/70">
                     Selected:{" "}
-                    {stepStatus.time.data?.includes("AM") || stepStatus.time.data?.includes("PM")
-                      ? stepStatus.time.data
-                      : formatTime12Hour(stepStatus.time.data)}
+                    {stepStatus.time.data?.time}
                   </div>
                 )}
               </CardContent>

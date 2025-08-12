@@ -99,6 +99,7 @@ export const handleCashfreePayment = async (
   bookingData?: {
     bookingDate?: string;
     bookingTime?: string;
+    bookingTimezone?: string;
     selectedService?: any;
     paymentMethod?: string;
   }
@@ -116,6 +117,7 @@ export const handleCashfreePayment = async (
       paymentMethod: bookingData?.paymentMethod || 'online',
       bookingDate: bookingData?.bookingDate,
       bookingTime: bookingData?.bookingTime,
+      bookingTimezone: bookingData?.bookingTimezone,
       selectedService: bookingData?.selectedService
     });
     

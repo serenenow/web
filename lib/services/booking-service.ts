@@ -121,6 +121,7 @@ export async function processPublicBooking(bookingData: BookingData): Promise<Bo
         {
           bookingDate: bookingData.date,
           bookingTime: bookingData.time,
+          bookingTimezone: bookingData.timezone,
           selectedService: bookingData.selectedService,
           paymentMethod: bookingData.paymentMode
         }
@@ -138,6 +139,7 @@ export async function processPublicBooking(bookingData: BookingData): Promise<Bo
         paymentMethod: bookingData.paymentMode,
         bookingDate: bookingData.date,
         bookingTime: bookingData.time,
+        bookingTimezone: bookingData.timezone,
         selectedService: bookingData.selectedService
       })
     }
@@ -167,13 +169,13 @@ export async function processAuthenticatedBooking(bookingData: AuthenticatedBook
       expertId: (value: string) => isValidString(value),
       serviceId: (value: string) => isValidString(value),
       selectedService: (value: any) => value && typeof value === 'object',
-      date: (value: string) => isValidDateString(value),
-      time: (value: string) => isValidTimeString(value),
+      date: (value: string) => isValidString(value),
+      time: (value: string) => isValidString(value),
       timezone: (value: string) => isValidString(value),
       paymentMode: (value: string) => ['online', 'direct'].includes(value),
       // Optional UTC time fields - if present, they should be valid ISO strings
-      startTimeUtc: (value: string | undefined) => value === undefined || (typeof value === 'string' && value.length > 0),
-      endTimeUtc: (value: string | undefined) => value === undefined || (typeof value === 'string' && value.length > 0),
+      startTimeUtc: (value: string) => isValidString(value),
+      endTimeUtc: (value: string) => isValidString(value),
     };
     
     const validation = validateObject(bookingData, validationSchema);
@@ -209,6 +211,7 @@ export async function processAuthenticatedBooking(bookingData: AuthenticatedBook
         {
           bookingDate: bookingData.date,
           bookingTime: bookingData.time,
+          bookingTimezone: bookingData.timezone,
           selectedService: bookingData.selectedService,
           paymentMethod: bookingData.paymentMode
         }
@@ -226,6 +229,7 @@ export async function processAuthenticatedBooking(bookingData: AuthenticatedBook
         paymentMethod: bookingData.paymentMode,
         bookingDate: bookingData.date,
         bookingTime: bookingData.time,
+        bookingTimezone: bookingData.timezone,
         selectedService: bookingData.selectedService
       })
     }

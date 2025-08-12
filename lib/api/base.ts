@@ -106,6 +106,13 @@ export class ApiError extends Error {
   }
 }
 
+export class CSRFError extends Error {
+  constructor(message: string = "Please refresh the page and try again.") {
+    super(message)
+    this.name = "CSRFError"
+  }
+}
+
 /**
  * Make an API request with standardized error handling and response processing
  * @param endpoint API endpoint path (will be appended to API_BASE_URL)
@@ -121,7 +128,8 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
   }
   
   // Security check: Warn about non-HTTPS URLs in production
-  if (process.env.NODE_ENV === 'production' && !url.startsWith('https://')) {
+  // Relative URLs are secure when served over HTTPS, so only check absolute URLs
+  if (process.env.NODE_ENV === 'production' && url.startsWith('http://')) {
     logger.error('Security warning: Using non-HTTPS URL in production:', url)
   }
 
@@ -152,7 +160,16 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
   
   // Add CSRF token to headers for non-GET requests
   if (options.method && options.method !== "GET") {
-    addCSRFToken(headers)
+    try {
+      await addCSRFToken(headers)
+      
+      if (API_DEBUG) {
+        logger.debug('Added CSRF token to request headers')
+      }
+    } catch (error) {
+      logger.error('Failed to add CSRF token:', error)
+      throw new CSRFError('Failed to get CSRF token. Please refresh the page and try again.')
+    }
   }
 
   // Merge default options with provided options

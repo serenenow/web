@@ -14,6 +14,7 @@ export interface PaymentSessionData {
   paymentMethod: string
   bookingDate?: string
   bookingTime?: string
+  bookingTimezone?: string
   selectedService?: ServiceDetailDto
   createdAt: number // Timestamp when this session was created
 }

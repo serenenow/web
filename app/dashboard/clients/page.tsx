@@ -556,7 +556,7 @@ export default function ClientsPage() {
                                   client.activationStatus === ActivationStatus.ACTIVATED ? "bg-mint/20 text-mint-dark" : "bg-gray-100 text-gray-600"
                                 }
                               >
-                                {client.activationStatus.toLowerCase()}
+                                {client.activationStatus}
                               </Badge>
                             </div>
 

@@ -95,16 +95,15 @@ export function getStoredCSRFToken(): string | null {
 /**
  * Add CSRF token to request headers
  * @param headers Headers object or Record<string, string>
- * @returns Updated headers with CSRF token
+ * @returns Promise that resolves to updated headers with CSRF token
  */
-export function addCSRFToken(headers: Headers | Record<string, string>): Headers | Record<string, string> {
+export async function addCSRFToken(headers: Headers | Record<string, string>): Promise<Headers | Record<string, string>> {
   // Only add token in browser environment
   if (typeof window !== "undefined") {
-    // Use the synchronous version that only gets from storage
-    // This avoids async issues in the request flow
-    const token = getStoredCSRFToken();
-    
-    if (token) {
+    try {
+      // Get token asynchronously - this will fetch from server if not available
+      const token = await getCSRFToken();
+      
       // Handle Headers object
       if (headers instanceof Headers) {
         headers.set(CSRF_HEADER_NAME, token);
@@ -116,6 +115,9 @@ export function addCSRFToken(headers: Headers | Record<string, string>): Headers
         ...headers,
         [CSRF_HEADER_NAME]: token
       };
+    } catch (error) {
+      logger.error('Failed to add CSRF token to headers:', error);
+      throw error; // Re-throw to let caller handle
     }
   }
   return headers;
