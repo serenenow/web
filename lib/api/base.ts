@@ -1,5 +1,5 @@
 // Base API configuration and utilities
-import { addCSRFToken, refreshCSRFToken } from "@/lib/utils/csrf-protection"
+import { addCSRFToken, refreshCSRFToken, API_BASE_URL, API_DEBUG } from "@/lib/utils/csrf-protection"
 import { logger } from "@/lib/utils/logger"
 import { processApiResponse, handleFetchError, ApiResponse } from "@/lib/utils/api-response"
 import { STORAGE_KEYS } from "@/lib/utils/secure-storage"
@@ -77,24 +77,7 @@ export function convertKeysToCamelCase(obj: any): any {
   }, {});
 }
 
-export const API_ENVIRONMENTS = {
-  LOCAL: "http://localhost:8080/serenenow/api/v1",
-  PROD: "/api/proxy", // Use Next.js API proxy to handle cross-origin cookies
-}
 
-export type ApiEnvironment = keyof typeof API_ENVIRONMENTS
-
-// Default to what's in environment variables, fall back to PROD
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || API_ENVIRONMENTS.PROD
-const API_DEBUG = process.env.NEXT_PUBLIC_API_DEBUG === "true"
-
-// Helper to get API URL for a specific environment
-export const getApiUrl = (environment?: ApiEnvironment): string => {
-  if (environment) {
-    return API_ENVIRONMENTS[environment]
-  }
-  return API_BASE_URL
-}
 
 export class ApiError extends Error {
   constructor(

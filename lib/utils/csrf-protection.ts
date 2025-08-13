@@ -11,13 +11,30 @@
 import { secureSessionStorage } from "./secure-storage";
 import { logger } from "./logger";
 
-// Import API URL helper
-import { getApiUrl } from "@/lib/api/base";
+// API Configuration
+export const API_ENVIRONMENTS = {
+  LOCAL: "http://localhost:8080/serenenow/api/v1",
+  PROD: "/api/proxy", // Use Next.js API proxy to handle cross-origin cookies
+};
 
-// Constants
+export type ApiEnvironment = keyof typeof API_ENVIRONMENTS;
+
+// Default to what's in environment variables, fall back to PROD
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || API_ENVIRONMENTS.PROD;
+export const API_DEBUG = process.env.NEXT_PUBLIC_API_DEBUG === "true";
+
+// Helper to get API URL for a specific environment
+export const getApiUrl = (environment?: ApiEnvironment): string => {
+  if (environment) {
+    return API_ENVIRONMENTS[environment];
+  }
+  return API_BASE_URL;
+};
+
+// CSRF Constants
 const CSRF_TOKEN_KEY = "serenenow_csrf_token";
 const CSRF_HEADER_NAME = "X-CSRF-Token";
-const CSRF_TOKEN_ENDPOINT = `${getApiUrl()}/csrf-token`;
+const CSRF_TOKEN_ENDPOINT = `${API_BASE_URL}/csrf-token`;
 
 /**
  * Fetch a CSRF token from the server
