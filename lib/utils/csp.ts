@@ -33,10 +33,19 @@ export function generateCSP(): string {
       "http://localhost:8080", // Local API server
       "https://kmp-production.up.railway.app" // Production API server
     ],
-    'frame-src': ["'self'", "https://sdk.cashfree.com"], // For payment iframe
+    'frame-src': [
+      "'self'", 
+      "https://sdk.cashfree.com",
+      "https://sandbox.cashfree.com", // Cashfree sandbox iframe
+      "https://api.cashfree.com" // Cashfree production iframe
+    ], // For payment iframe
     'object-src': ["'none'"], // Restrict <object>, <embed>, and <applet> elements
     'base-uri': ["'self'"], // Restrict base URIs
-    'form-action': ["'self'"], // Restrict form submissions
+    'form-action': [
+      "'self'", 
+      "https://sandbox.cashfree.com", // Cashfree sandbox form submissions
+      "https://api.cashfree.com" // Cashfree production form submissions
+    ], // Restrict form submissions
     'frame-ancestors': ["'self'"], // Restrict framing to same origin
     'upgrade-insecure-requests': [], // Force HTTPS
   };

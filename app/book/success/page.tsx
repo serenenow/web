@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import type { ServiceDetailDto } from "@/lib/api/service"
-import { VerifyCodeResponse, getCachedBookingData } from "@/lib/services/client-code-service"
 import { getPaymentSession, clearPaymentSession } from "@/lib/utils/secure-payment"
 import { formatDate, formatTime } from "@/lib/utils/time-utils"
 import { STORAGE_KEYS } from "@/lib/utils/secure-storage"
@@ -18,11 +17,11 @@ interface BookingSuccessData {
   paymentMethod?: string
   bookingDate?: string
   bookingTime?: string
+  bookingTimezone?: string
   selectedService?: ServiceDetailDto
 }
 
 export default function BookingSuccessPage() {
-  const [bookingData, setBookingData] = useState<VerifyCodeResponse | null>(null)
   const [successData, setSuccessData] = useState<BookingSuccessData>({})
   const [loading, setLoading] = useState(true)
 
@@ -40,6 +39,7 @@ export default function BookingSuccessPage() {
         paymentMethod: paymentSession.paymentMethod,
         bookingDate: paymentSession.bookingDate,
         bookingTime: paymentSession.bookingTime,
+        bookingTimezone: paymentSession.bookingTimezone,
         selectedService: paymentSession.selectedService,
       })
       
@@ -104,30 +104,7 @@ export default function BookingSuccessPage() {
               </h2>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Therapist Info */}
-              {bookingData?.expertProfile && (
-                <div className="flex items-center space-x-4 p-4 bg-mint/5 rounded-lg">
-                  <div className="w-16 h-16 bg-mint/10 rounded-full flex items-center justify-center overflow-hidden">
-                    {bookingData.expertProfile.pictureUrl ? (
-                      <Image
-                        src={bookingData.expertProfile.pictureUrl || "/placeholder.svg"}
-                        alt={bookingData.expertProfile.name}
-                        width={64}
-                        height={64}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-8 w-8 text-mint-dark" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-charcoal">{bookingData.expertProfile.name}</h3>
-                    <p className="text-charcoal/70">{bookingData.expertProfile.qualification}</p>
-                    <p className="text-sm text-mint-dark">{bookingData.expertProfile.email}</p>
-                  </div>
-                </div>
-              )}
-
+              
               {/* Service & Schedule Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -171,37 +148,13 @@ export default function BookingSuccessPage() {
 
                   <div>
                     <h4 className="font-medium text-charcoal mb-2">Timezone</h4>
-                    <p className="text-charcoal/70">{bookingData?.expertProfile.timeZone || "IST"}</p>
+                    <p className="text-charcoal/70">{successData.bookingTimezone}</p>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Client Information */}
-          {bookingData?.clientResponse.client && (
-            <Card className="border-mint/20 shadow-sm">
-              <CardHeader className="pb-4">
-                <h2 className="text-xl font-semibold text-charcoal flex items-center">
-                  <User className="h-5 w-5 mr-2 text-mint-dark" />
-                  Client Information
-                </h2>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-medium text-charcoal mb-2">Name</h4>
-                    <p className="text-charcoal/70">{bookingData.clientResponse.client.name}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-charcoal mb-2">Email</h4>
-                    <p className="text-charcoal/70">{bookingData.clientResponse.client.email}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
+          
           {/* Order Information */}
           <Card className="border-mint/20 shadow-sm">
             <CardHeader className="pb-4">
@@ -209,12 +162,6 @@ export default function BookingSuccessPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {successData.orderId && (
-                  <div>
-                    <h4 className="font-medium text-charcoal mb-2">Order ID</h4>
-                    <p className="text-charcoal/70 font-mono text-sm">{successData.orderId}</p>
-                  </div>
-                )}
                 {successData.appointmentId && (
                   <div>
                     <h4 className="font-medium text-charcoal mb-2">Appointment ID</h4>
@@ -280,37 +227,10 @@ export default function BookingSuccessPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-mint-dark text-white rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
-                    1
-                  </div>
                   <div>
-                    <h4 className="font-medium text-charcoal">Confirmation Email</h4>
+                    <h4 className="font-medium text-charcoal">Confirmation</h4>
                     <p className="text-sm text-charcoal/70">
-                      You'll receive a confirmation email with session details and joining instructions.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-mint-dark text-white rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
-                    2
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-charcoal">Session Reminder</h4>
-                    <p className="text-sm text-charcoal/70">
-                      We'll send you a reminder 24 hours and 1 hour before your session.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-mint-dark text-white rounded-full flex items-center justify-center text-sm font-medium mt-0.5">
-                    3
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-charcoal">Join Your Session</h4>
-                    <p className="text-sm text-charcoal/70">
-                      Use the meeting link provided in your confirmation email to join the session.
+                      You'll receive a confirmation email with session details and meeting invite when the payment is confirmed.
                     </p>
                   </div>
                 </div>

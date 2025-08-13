@@ -10,6 +10,7 @@ import { processAuthenticatedBooking } from "@/lib/services/booking-service"
 import { getAvailableSlots } from "@/lib/api/availability"
 import type { ServiceDetailDto } from "@/lib/api/service"
 import { setClientAuthToken } from "@/lib/api/client-auth"
+import { getClientPaymentOptions, type ClientPaymentOptions } from "@/lib/api/client"
 import {
   timezones,
   getBrowserTimezone,
@@ -54,6 +55,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [timezone, setTimezone] = useState(getBrowserTimezone() || "Asia/Kolkata")
   const [paymentMode, setPaymentMode] = useState<"online" | "direct">("online")
+  const [paymentOptions, setPaymentOptions] = useState<ClientPaymentOptions | null>(null)
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -133,6 +135,21 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
       }
 
       setBookingData(data)
+
+      // Fetch payment options for this client
+      try {
+        const clientPaymentOptions = await getClientPaymentOptions(data.clientResponse.client.id)
+        setPaymentOptions(clientPaymentOptions)
+        
+        // If direct payment is not allowed, default to online payment
+        if (!clientPaymentOptions.allowDirectPayment) {
+          setPaymentMode("online")
+        }
+      } catch (err) {
+        console.error("Failed to load payment options:", err)
+        // Default to allowing both options if API fails
+        setPaymentOptions({ allowDirectPayment: true, directPaymentNotes: null })
+      }
 
       // Auto-select service if only one
       if (data.services.length === 1) {
@@ -749,17 +766,19 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
                         <div className="text-sm text-charcoal/70">Secure payment via Cashfree</div>
                       </button>
 
-                      <button
-                        onClick={() => setPaymentMode("direct")}
-                        className={`w-full p-4 rounded-lg border text-left transition-colors ${
-                          paymentMode === "direct"
-                            ? "border-mint-dark bg-mint/5"
-                            : "border-gray-200 hover:border-mint-dark"
-                        }`}
-                      >
-                        <div className="font-medium text-charcoal">Pay Directly to Therapist</div>
-                        <div className="text-sm text-charcoal/70">Pay during or after the session</div>
-                      </button>
+                      {paymentOptions?.allowDirectPayment && (
+                        <button
+                          onClick={() => setPaymentMode("direct")}
+                          className={`w-full p-4 rounded-lg border text-left transition-colors ${
+                            paymentMode === "direct"
+                              ? "border-mint-dark bg-mint/5"
+                              : "border-gray-200 hover:border-mint-dark"
+                          }`}
+                        >
+                          <div className="font-medium text-charcoal">Pay Directly to Therapist</div>
+                          <div className="text-sm text-charcoal/70">Pay before the session to confirm your appointment</div>
+                        </button>
+                      )}
                     </div>
 
                     {paymentMode === "online" && selectedService && (
@@ -781,6 +800,16 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
                             <span>Total</span>
                             <span>₹{total}</span>
                           </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Direct Payment Notes */}
+                    {paymentMode === "direct" && paymentOptions?.directPaymentNotes && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <div className="text-sm text-blue-800">
+                          <strong>Payment Instructions:</strong>
+                          <p className="mt-1">{paymentOptions.directPaymentNotes}</p>
                         </div>
                       </div>
                     )}

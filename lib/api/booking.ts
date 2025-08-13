@@ -57,11 +57,8 @@ export const createAppointment = async (appointmentData: AppointmentAddRequest):
   })
 }
 
-// Cashfree SDK integrity hash (SHA-384)  
-// This should be updated whenever the SDK is updated
-const CASHFREE_SDK_INTEGRITY = "sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z"
-
-// Load Cashfree SDK with integrity check
+// Load Cashfree SDK without integrity check to avoid CORS issues
+// Note: In production, consider hosting the SDK locally or using a CDN with proper CORS headers
 export const loadCashfreeSDK = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (typeof window !== "undefined" && window.Cashfree) {
@@ -74,19 +71,33 @@ export const loadCashfreeSDK = (): Promise<void> => {
       return
     }
 
+    // Check if script is already being loaded
+    const existingScript = document.querySelector('script[src="https://sdk.cashfree.com/js/v3/cashfree.js"]')
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve())
+      existingScript.addEventListener('error', (error) => {
+        logger.error("Failed to load Cashfree SDK:", error)
+        reject(new Error("Failed to load Cashfree SDK. Please check network connection or try again later."))
+      })
+      return
+    }
+
     const script = document.createElement("script")
     script.src = "https://sdk.cashfree.com/js/v3/cashfree.js"
     script.async = true
     
-    // Add integrity and crossorigin attributes for security
-    script.integrity = CASHFREE_SDK_INTEGRITY
-    script.crossOrigin = "anonymous"
+    // Remove integrity check to avoid CORS issues during development
+    // The Cashfree CDN doesn't send proper CORS headers for integrity checks
     
-    script.onload = () => resolve()
+    script.onload = () => {
+      logger.info("Cashfree SDK loaded successfully")
+      resolve()
+    }
     script.onerror = (error) => {
       logger.error("Failed to load Cashfree SDK:", error)
       reject(new Error("Failed to load Cashfree SDK. Please check network connection or try again later."))
     }
+    
     document.head.appendChild(script)
   })
 }

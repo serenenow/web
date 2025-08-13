@@ -46,6 +46,14 @@ export interface SendClientInviteRequest {
 }
 
 /**
+ * Client payment options configuration
+ */
+export interface ClientPaymentOptions {
+  allowDirectPayment: boolean
+  directPaymentNotes?: string | null
+}
+
+/**
  * Fetch clients for a specific expert
  * @param expertId The expert's ID
  * @returns Promise with array of clients
@@ -64,4 +72,13 @@ export async function sendClientInvite(inviteRequest: SendClientInviteRequest): 
     method: "POST",
     body: JSON.stringify(inviteRequest),
   })
+}
+
+/**
+ * Get payment options for a specific client
+ * @param clientId The client's ID
+ * @returns Promise with client payment options
+ */
+export async function getClientPaymentOptions(clientId: string): Promise<ClientPaymentOptions> {
+  return apiRequest<ClientPaymentOptions>(`/client/payment-options?client_id=${clientId}`)
 }
