@@ -1,5 +1,5 @@
 // Base API configuration and utilities
-import { addCSRFToken } from "@/lib/utils/csrf-protection"
+import { addCSRFToken, refreshCSRFToken } from "@/lib/utils/csrf-protection"
 import { logger } from "@/lib/utils/logger"
 import { processApiResponse, handleFetchError, ApiResponse } from "@/lib/utils/api-response"
 import { STORAGE_KEYS } from "@/lib/utils/secure-storage"
@@ -120,6 +120,13 @@ export class CSRFError extends Error {
  * @returns Processed API response data converted to camelCase
  */
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  return await makeRequestWithCSRFRetry<T>(endpoint, options);
+}
+
+/**
+ * Internal function that handles CSRF token retry logic
+ */
+async function makeRequestWithCSRFRetry<T>(endpoint: string, options: RequestInit, isRetry = false): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
   
   // Log API request in debug mode
@@ -225,9 +232,31 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
       }
     }
     
-    // If the response was not successful, throw an error
+    // If the response was not successful, check for CSRF errors
     if (!apiResponse.success) {
-      throw new Error(apiResponse.error?.message || `HTTP ${apiResponse.status}: ${response.statusText}`)
+      const errorMessage = apiResponse.error?.message || `HTTP ${apiResponse.status}: ${response.statusText}`;
+      
+      // Check if this is a CSRF-related error and we haven't already retried
+      if (!isRetry && apiResponse.status === 403 && 
+          (errorMessage.toLowerCase().includes('csrf') || 
+           errorMessage.toLowerCase().includes('token') ||
+           errorMessage.toLowerCase().includes('forbidden'))) {
+        
+        logger.warn('CSRF token may be invalid, attempting to refresh and retry...');
+        
+        try {
+          // Refresh the CSRF token
+          await refreshCSRFToken();
+          
+          // Retry the request with the new token
+          return await makeRequestWithCSRFRetry<T>(endpoint, options, true);
+        } catch (retryError) {
+          logger.error('Failed to refresh CSRF token and retry:', retryError);
+          throw new CSRFError('Session expired. Please refresh the page and try again.');
+        }
+      }
+      
+      throw new Error(errorMessage);
     }
     
     // If there's no data, return an empty object

@@ -9,6 +9,7 @@ import {
   Facebook,
   FileText,
   Instagram,
+  Linkedin,
   Lock,
   Mail,
   MapPin,
@@ -463,17 +464,14 @@ export default function LandingPage() {
                 </div>
                 {/* Social Media Icons */}
                 <div className="flex space-x-4">
-                  <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
-                    <Facebook className="h-5 w-5 text-white" />
-                  </a>
-                  <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
+                  <a href="https://x.com/serenenowapp" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
                     <Twitter className="h-5 w-5 text-white" />
                   </a>
-                  <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
+                  <a href="https://www.instagram.com/serenenowapp/" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
                     <Instagram className="h-5 w-5 text-white" />
                   </a>
                   <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
-                    <MessageSquare className="h-5 w-5 text-white" />
+                    <Linkedin className="h-5 w-5 text-white" />
                   </a>
                 </div>
               </div>

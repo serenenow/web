@@ -70,6 +70,7 @@ function generateLocalFallbackToken(): string {
 
 /**
  * Get the current CSRF token or fetch a new one from the server if none exists
+ * This function will automatically refresh the token if the server session has changed
  * @returns The current CSRF token
  */
 export async function getCSRFToken(): Promise<string> {
@@ -81,6 +82,25 @@ export async function getCSRFToken(): Promise<string> {
     storage.setItem(CSRF_TOKEN_KEY, token);
   }
   
+  return token;
+}
+
+/**
+ * Force refresh the CSRF token by fetching a new one from the server
+ * This should be called when a CSRF error occurs or session changes are detected
+ * @returns The new CSRF token
+ */
+export async function refreshCSRFToken(): Promise<string> {
+  const storage = secureSessionStorage;
+  
+  // Clear the old token first
+  storage.removeItem(CSRF_TOKEN_KEY);
+  
+  // Fetch a new token
+  const token = await fetchCSRFToken();
+  storage.setItem(CSRF_TOKEN_KEY, token);
+  
+  logger.debug('CSRF token refreshed');
   return token;
 }
 
@@ -140,9 +160,22 @@ export async function initializeCSRFProtection(): Promise<void> {
 }
 
 /**
+ * Clear the current CSRF token from storage
+ * This should be called when the session changes or expires
+ */
+export function clearCSRFToken(): void {
+  if (typeof window === "undefined") return;
+  
+  const storage = secureSessionStorage;
+  storage.removeItem(CSRF_TOKEN_KEY);
+  logger.debug('Cleared CSRF token');
+}
+
+/**
  * Validate CSRF token against the stored token
  * Note: This is primarily for client-side validation.
  * Server-side validation is the primary security mechanism.
+ * @param token Token to validate
  */
 export function validateCSRFToken(token: string): boolean {
   if (typeof window === "undefined") {
