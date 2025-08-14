@@ -17,6 +17,7 @@ import {
   getTimezoneDisplayWithOffset,
   formatDate,
   convertTimeToTimezone,
+  formatTime,
 } from "@/lib/utils/time-utils"
 
 interface ClientBookingPageProps {
@@ -74,11 +75,14 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
       timezone: string
     }>
   >([])
+
   const [originalTimeSlots, setOriginalTimeSlots] = useState<
     Array<{
       time: string
       available: boolean
       timezone: string
+      startTimeUtc: string
+      endTimeUtc: string
     }>
   >([])
 
@@ -222,7 +226,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
 
           const convertedSlots = originalSlots.map((slot) => ({
             ...slot,
-            time: convertTimeToCurrentTimezone(slot.time, slot.timezone),
+            time: slot.time,
           }))
 
           setAvailableTimeSlots(convertedSlots)
@@ -240,7 +244,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
     if (originalTimeSlots.length > 0) {
       const convertedSlots = originalTimeSlots.map((slot) => ({
         ...slot,
-        time: convertTimeToCurrentTimezone(slot.time, slot.timezone),
+        time: convertTimeToCurrentTimezone(slot.startTimeUtc, timezone),
       }))
 
       setAvailableTimeSlots(convertedSlots)
@@ -248,18 +252,14 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
     }
   }, [timezone, originalTimeSlots])
 
-  const convertTimeToCurrentTimezone = (timeString: string, sourceTimezone: string) => {
+  const convertTimeToCurrentTimezone = (isoString: string, sourceTimezone: string) => {
     try {
-      if (timeString.includes("AM") || timeString.includes("PM")) {
-        return timeString
-      }
-
-      const today = new Date().toISOString().split("T")[0]
-      const isoString = `${today}T${timeString}:00`
-      return convertTimeToTimezone(isoString, timezone)
+      let convertedTime = convertTimeToTimezone(isoString, timezone)
+      const formattedTime = formatTime(convertedTime)
+      return formattedTime
     } catch (error) {
       console.error("Error converting time:", error)
-      return timeString
+      return isoString
     }
   }
 

@@ -48,7 +48,9 @@ export default function DashboardPage() {
           // Fetch dashboard data using expert ID
           const data = await fetchDashboardData(expertData.id)
           setDashboardData(data)
-          setupProfile(plainLocalStorage.getItem<boolean>(STORAGE_KEYS.EXPERT_SETUP_PROFILE_COMPLETE) || false)
+          let hasServiceSetup = data.services.length > 0
+          setupProfile(hasServiceSetup)
+          plainLocalStorage.setItem(STORAGE_KEYS.EXPERT_SETUP_PROFILE_COMPLETE, hasServiceSetup)
         }
       } catch (error) {
         console.error("Auth check error:", error)

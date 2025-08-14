@@ -132,14 +132,23 @@ export const generateTimeOptions = () => {
 
 /**
  * Convert time from UTC to local timezone
- * @param isoTime ISO time string
+ * @param isoTime ISO time string (assumes UTC if no timezone info)
  * @param targetTimezone Target timezone
  * @returns Time in HH:mm format in the target timezone
  */
 export const convertTimeToTimezone = (isoTime: string, targetTimezone: string): string => {
   try {
-    // Format the ISO time string directly to the target timezone
-    return formatInTimeZone(parseISO(isoTime), targetTimezone, 'HH:mm')
+    // If the ISO string doesn't have timezone info, assume it's UTC
+    let utcIsoString = isoTime
+    if (!isoTime.includes('Z') && !isoTime.includes('+') && !isoTime.includes('-', 10)) {
+      // Add 'Z' to indicate UTC time
+      utcIsoString = isoTime + 'Z'
+    }
+    
+    // Parse as UTC and format to target timezone
+    const utcDate = parseISO(utcIsoString)
+    const formattedTime = formatInTimeZone(utcDate, targetTimezone, 'HH:mm')
+    return formattedTime
   } catch (error) {
     logger.error('Error converting time:', error)
     // Fallback to extracting time directly from string

@@ -57,18 +57,18 @@ export default function AvailabilityPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
   const [schedule, setSchedule] = useState<DaySchedule[]>([
-    { day: "Monday", enabled: true, slots: [{ id: "1", startTime: "10:00", endTime: "17:00" }] },
-    { day: "Tuesday", enabled: true, slots: [{ id: "2", startTime: "10:00", endTime: "17:00" }] },
-    { day: "Wednesday", enabled: true, slots: [{ id: "3", startTime: "10:00", endTime: "17:00" }] },
-    { day: "Thursday", enabled: true, slots: [{ id: "4", startTime: "10:00", endTime: "17:00" }] },
-    { day: "Friday", enabled: true, slots: [{ id: "5", startTime: "10:00", endTime: "17:00" }] },
+    { day: "Monday", enabled: true, slots: [] },
+    { day: "Tuesday", enabled: true, slots: [] },
+    { day: "Wednesday", enabled: true, slots: [] },
+    { day: "Thursday", enabled: true, slots: [] },
+    { day: "Friday", enabled: true, slots: [] },
     { day: "Saturday", enabled: false, slots: [] },
     { day: "Sunday", enabled: false, slots: [] },
   ])
 
   const [originalSchedule, setOriginalSchedule] = useState<DaySchedule[]>([])
   const [hasScheduleChanges, setHasScheduleChanges] = useState(false)
-  const [timezone, setTimezone] = useState("Asia/Kolkata")
+  const [timezone, setTimezone] = useState("")
   const [timeOffEntries, setTimeOffEntries] = useState<TimeOffEntry[]>([])
   const [showTimeOffForm, setShowTimeOffForm] = useState(false)
   const [selectedDate, setSelectedDate] = useState("")
@@ -89,14 +89,12 @@ export default function AvailabilityPage() {
         id: expertData.id || "",
       })
       
-      // Set timezone from expert data if available
-      if (expertData.timeZone) {
-        setTimezone(expertData.timeZone)
-      }
-      
+      let timezone = expertData.timeZone || getBrowserTimezone()
+      setTimezone(timezone)
+
       if (expertData.id) {
         setExpertId(expertData.id)
-        fetchAvailability(expertData.id)
+        fetchAvailability(expertData.id, timezone)
       } else {
         setIsLoading(false)
       }
@@ -105,13 +103,13 @@ export default function AvailabilityPage() {
     }
   }, [])
 
-  const fetchAvailability = async (id: string) => {
+  const fetchAvailability = async (id: string, timezone: string) => {
     if (!id) return
 
     try {
       setIsLoading(true)
       const availabilityData = await getExpertAvailability(id)
-      processAvailabilityData(availabilityData)
+      processAvailabilityData(availabilityData, timezone)
       setIsLoading(false)
     } catch (error) {
       logger.error("Error fetching availability data:", error)
@@ -120,7 +118,7 @@ export default function AvailabilityPage() {
   }
 
   // Process availability data from API into UI format
-  const processAvailabilityData = (availabilityData: AvailabilityDto[]) => {
+  const processAvailabilityData = (availabilityData: AvailabilityDto[], timezone: string) => {
     // Split into recurring (weekly) and non-recurring (custom) availabilities
     const weeklyAvailabilities = availabilityData.filter((a) => a.isRecurring)
     const customAvailabilities = availabilityData.filter((a) => !a.isRecurring)
@@ -227,7 +225,7 @@ export default function AvailabilityPage() {
   useEffect(() => {
     if (!isLoading && expertId) {
       // Refetch availability data when timezone changes
-      fetchAvailability(expertId)
+      fetchAvailability(expertId, timezone)
     }
   }, [timezone])
 
