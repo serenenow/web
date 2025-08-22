@@ -763,7 +763,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
                         }`}
                       >
                         <div className="font-medium text-charcoal">Pay Online</div>
-                        <div className="text-sm text-charcoal/70">Secure payment via Cashfree</div>
+                        <div className="text-sm text-charcoal/70">Secure payment via SereneNow</div>
                       </button>
 
                       {paymentOptions?.allowDirectPayment && (
