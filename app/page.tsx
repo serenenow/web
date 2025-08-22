@@ -55,7 +55,7 @@ export default function LandingPage() {
                 className="bg-mint-dark hover:bg-mint-dark/90 text-white px-8 py-4 text-lg"
                 asChild
               >
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLSc49XBBZDbeNVC7y_WdXhYjCxjaOwK66KOBH6Ty_4XrzWMYvQ/viewform?usp=dialog" target="_blank" rel="noopener noreferrer">
+                <a href="/login" target="_blank" rel="noopener noreferrer">
                   Get Started Free
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </a>
@@ -215,7 +215,7 @@ export default function LandingPage() {
                 className="w-full bg-mint-dark hover:bg-mint-dark/90 text-white py-3"
                 asChild
               >
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLSc49XBBZDbeNVC7y_WdXhYjCxjaOwK66KOBH6Ty_4XrzWMYvQ/viewform?usp=dialog" target="_blank" rel="noopener noreferrer">
+                <a href="/login" target="_blank" rel="noopener noreferrer">
                   Get Started Free
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>

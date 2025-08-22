@@ -89,7 +89,7 @@ export default function LoginPage() {
               SereneNow
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-charcoal mb-2">Welcome Back</h1>
+          <h1 className="text-2xl font-bold text-charcoal mb-2">Welcome</h1>
           <p className="text-charcoal/70 text-sm">Enter your email to receive a verification code</p>
         </div>
 
