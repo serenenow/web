@@ -42,10 +42,11 @@ export interface AppointmentResponse {
   orderAmount: number
 }
 
-// Cashfree integration types
+// Payment SDK integration types
 declare global {
   interface Window {
     Cashfree: any
+    Razorpay: any
   }
 }
 
@@ -96,6 +97,47 @@ export const loadCashfreeSDK = (): Promise<void> => {
     script.onerror = (error) => {
       logger.error("Failed to load Cashfree SDK:", error)
       reject(new Error("Failed to load Cashfree SDK. Please check network connection or try again later."))
+    }
+    
+    document.head.appendChild(script)
+  })
+}
+
+// Load Razorpay SDK
+export const loadRazorpaySDK = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window !== "undefined" && window.Razorpay) {
+      resolve()
+      return
+    }
+
+    if (typeof window === "undefined") {
+      reject(new Error("Window object not available"))
+      return
+    }
+
+    // Check if script is already being loaded
+    const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve())
+      existingScript.addEventListener('error', (error) => {
+        logger.error("Failed to load Razorpay SDK:", error)
+        reject(new Error("Failed to load Razorpay SDK. Please check network connection or try again later."))
+      })
+      return
+    }
+
+    const script = document.createElement("script")
+    script.src = "https://checkout.razorpay.com/v1/checkout.js"
+    script.async = true
+    
+    script.onload = () => {
+      logger.info("Razorpay SDK loaded successfully")
+      resolve()
+    }
+    script.onerror = (error) => {
+      logger.error("Failed to load Razorpay SDK:", error)
+      reject(new Error("Failed to load Razorpay SDK. Please check network connection or try again later."))
     }
     
     document.head.appendChild(script)
@@ -166,6 +208,131 @@ export const handleCashfreePayment = async (
     return false
   } catch (error) {
     logger.error("Cashfree payment error:", error)
+    throw new Error("Payment processing failed. Please try again.")
+  }
+}
+
+// Handle Razorpay payment
+export const handleRazorpayPayment = async (
+  paymentSessionId: string, 
+  orderId: string, 
+  appointmentId: string,
+  bookingData?: {
+    bookingDate?: string;
+    bookingTime?: string;
+    bookingTimezone?: string;
+    selectedService?: any;
+    paymentMethod?: string;
+  }
+): Promise<boolean> => {
+  try {
+    // Store payment session data securely before initiating payment
+    const sessionRef = generateSessionReference();
+    storeSessionReference(sessionRef, paymentSessionId);
+    
+    // Store complete payment session data
+    storePaymentSession({
+      orderId,
+      appointmentId,
+      paymentSessionId,
+      paymentMethod: bookingData?.paymentMethod || 'online',
+      bookingDate: bookingData?.bookingDate,
+      bookingTime: bookingData?.bookingTime,
+      bookingTimezone: bookingData?.bookingTimezone,
+      selectedService: bookingData?.selectedService
+    });
+    
+    await loadRazorpaySDK()
+
+    if (typeof window === "undefined" || !window.Razorpay) {
+      throw new Error("Razorpay SDK not available")
+    }
+
+    // Debug logging
+    const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+    logger.info("Razorpay Key ID:", razorpayKey ? `${razorpayKey.substring(0, 12)}...` : 'NOT SET');
+    logger.info("Order ID:", orderId);
+    
+    // Validate required fields
+    if (!razorpayKey) {
+      throw new Error("Razorpay Key ID not configured");
+    }
+    
+    if (!orderId) {
+      throw new Error("Order ID is required");
+    }
+    
+    return new Promise((resolve, reject) => {
+      const options = {
+        key: razorpayKey,
+        // Remove amount from here - let Razorpay get it from the order
+        currency: 'INR',
+        name: 'SereneNow',
+        description: 'Appointment Booking',
+        order_id: orderId,
+        handler: function (response: any) {
+          logger.info("Razorpay payment successful:", response)
+          // Verify payment on backend before resolving
+          // TODO: Add backend verification call here
+          resolve(true)
+        },
+        prefill: {
+          name: bookingData?.selectedService?.expertName || 'Customer'
+        },
+        notes: {
+          appointment_id: appointmentId,
+          booking_date: bookingData?.bookingDate,
+          booking_time: bookingData?.bookingTime
+        },
+        theme: {
+          color: '#3399cc'
+        },
+        modal: {
+          ondismiss: function() {
+            logger.info("Razorpay payment modal dismissed")
+            reject(new Error("Payment cancelled by user"))
+          },
+          // Add escape close option
+          escape: true,
+          // Handle modal close events properly
+          onhidden: function() {
+            logger.info("Razorpay modal hidden")
+          }
+        },
+        // Add retry options
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        // Add timeout
+        timeout: 300, // 5 minutes
+        // Add remember customer option
+        remember_customer: false
+      }
+
+      try {
+        const rzp = new window.Razorpay(options)
+        
+        rzp.on('payment.failed', function (response: any) {
+          logger.error("Razorpay payment failed:", response.error)
+          const errorMessage = response.error?.description || "Payment failed. Please try again.";
+          reject(new Error(errorMessage))
+        })
+        
+        // Add additional error handling
+        rzp.on('payment.error', function (response: any) {
+          logger.error("Razorpay payment error:", response)
+          reject(new Error("Payment processing error. Please try again."))
+        })
+        
+        rzp.open()
+      } catch (error) {
+        logger.error("Error creating Razorpay instance:", error)
+        reject(new Error("Failed to initialize payment. Please try again."))
+      }
+    })
+  } catch (error) {
+    logger.error("Razorpay payment error:", error)
     throw new Error("Payment processing failed. Please try again.")
   }
 }

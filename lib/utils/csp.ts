@@ -17,6 +17,7 @@ export function generateCSP(): string {
       "'unsafe-inline'", // Required for Next.js
       "'unsafe-eval'", // Required for Next.js
       "https://sdk.cashfree.com", // Cashfree SDK
+      "https://checkout.razorpay.com", // Razorpay SDK
       "https://api.serenenow.com", // API domain
       "http://localhost:8080", // Local API server
       "https://kmp-production.up.railway.app", // Production API server
@@ -29,6 +30,9 @@ export function generateCSP(): string {
       "'self'", 
       "https://api.serenenow.com", 
       "https://sdk.cashfree.com",
+      "https://api.razorpay.com", // Razorpay API
+      "https://checkout.razorpay.com", // Razorpay checkout
+      "https://lumberjack.razorpay.com", // Razorpay analytics/tracking
       "https://www.google-analytics.com",
       "http://localhost:8080", // Local API server
       "https://kmp-production.up.railway.app" // Production API server
@@ -37,14 +41,18 @@ export function generateCSP(): string {
       "'self'", 
       "https://sdk.cashfree.com",
       "https://sandbox.cashfree.com", // Cashfree sandbox iframe
-      "https://api.cashfree.com" // Cashfree production iframe
+      "https://api.cashfree.com", // Cashfree production iframe
+      "https://api.razorpay.com", // Razorpay iframe
+      "https://checkout.razorpay.com" // Razorpay checkout iframe
     ], // For payment iframe
     'object-src': ["'none'"], // Restrict <object>, <embed>, and <applet> elements
     'base-uri': ["'self'"], // Restrict base URIs
     'form-action': [
       "'self'", 
       "https://sandbox.cashfree.com", // Cashfree sandbox form submissions
-      "https://api.cashfree.com" // Cashfree production form submissions
+      "https://api.cashfree.com", // Cashfree production form submissions
+      "https://api.razorpay.com", // Razorpay form submissions
+      "https://checkout.razorpay.com" // Razorpay checkout form submissions
     ], // Restrict form submissions
     'frame-ancestors': ["'self'"], // Restrict framing to same origin
     'upgrade-insecure-requests': [], // Force HTTPS

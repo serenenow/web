@@ -1,6 +1,7 @@
 import { 
   createAppointment, 
   handleCashfreePayment, 
+  handleRazorpayPayment,
   Location, 
   PaymentProvider, 
   type AppointmentAddRequest } from "@/lib/api/booking"
@@ -114,7 +115,7 @@ export async function processPublicBooking(bookingData: BookingData): Promise<Bo
     // Step 4: Handle payment if online
     if (bookingData.paymentMode === "online") {
       logger.info("Processing online payment...")
-      const paymentSuccess = await handleCashfreePayment(
+      const paymentSuccess = await handleRazorpayPayment(
         appointmentResponse.paymentSessionId,
         appointmentResponse.orderId,
         appointmentResponse.id,
@@ -204,7 +205,7 @@ export async function processAuthenticatedBooking(bookingData: AuthenticatedBook
 
     // Handle payment if online
     if (bookingData.paymentMode === "online") {
-      const paymentSuccess = await handleCashfreePayment(
+      const paymentSuccess = await handleRazorpayPayment(
         appointmentResponse.paymentSessionId,
         appointmentResponse.orderId,
         appointmentResponse.id,
@@ -285,7 +286,7 @@ async function createBookingWithPayment(bookingData: {
       taxAmount: taxAmount,
       platformFee: platformFee,
       totalAmount: totalAmount,
-      gateway: bookingData.paymentMode === "online" ? PaymentProvider.CASH_FREE : PaymentProvider.DIRECT,
+      gateway: bookingData.paymentMode === "online" ? PaymentProvider.RAZORPAY : PaymentProvider.DIRECT,
     },
   }
 
