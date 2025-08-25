@@ -378,7 +378,7 @@ export default function LandingPage() {
               <CollapsibleTrigger className="w-full p-6 text-left">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
-                    Is SereneNow really free?
+                    What is SereneNow?
                   </h3>
                   <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
                 </div>
@@ -386,8 +386,9 @@ export default function LandingPage() {
               <CollapsibleContent>
                 <div className="px-6 pb-6">
                   <p className="text-charcoal/80 leading-relaxed">
-                    Yes! You can use SereneNow's core features forever with no subscription fees. Our free plan includes
-                    everything you need to run a solo practice effectively.
+                    SereneNow is an all-in-one digital workspace designed specifically for mental health professionals. 
+                    From appointment scheduling and client management to task assignments and resource sharing, it simplifies your workflow so you can focus on what truly matters — your clients. 
+                    Think of it as your digital assistant, tailor-made for therapists, psychologists, counselors, and psychiatrists.
                   </p>
                 </div>
               </CollapsibleContent>
@@ -399,7 +400,7 @@ export default function LandingPage() {
               <CollapsibleTrigger className="w-full p-6 text-left">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
-                    What do I get in the free plan?
+                    Who can use SereneNow?
                   </h3>
                   <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
                 </div>
@@ -407,8 +408,8 @@ export default function LandingPage() {
               <CollapsibleContent>
                 <div className="px-6 pb-6">
                   <p className="text-charcoal/80 leading-relaxed">
-                    Everything you need to run a solo practice: secure client data, appointments, notes, and privacy
-                    tools — with one service. No hidden fees, no time limits, completely free forever.
+                    SereneNow is built for all mental health professionals — therapists, psychologists, counselors, and psychiatrists. Whether you offer in-person sessions, online therapy, or a mix of both, 
+                    SereneNow helps you streamline your practice. If you’re tired of juggling multiple tools for scheduling, payments, and communication, SereneNow is your go-to solution.
                   </p>
                 </div>
               </CollapsibleContent>
@@ -420,22 +421,194 @@ export default function LandingPage() {
               <CollapsibleTrigger className="w-full p-6 text-left">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
-                    What if I need more features or team support?
+                    How can I use SereneNow?
                   </h3>
-                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-colors" />
+                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="px-6 pb-6">
                   <p className="text-charcoal/80 leading-relaxed">
-                    We offer custom plans for clinics and organizations. Contact us and we'll tailor something perfect
-                    for your team's needs, including multi-therapist management, advanced reporting, and dedicated
-                    support.
+                    <p>Getting started is simple!</p>
+                    <p><strong>On web:</strong> Click <em>Get Started</em>, set up your profile, add your services, and set your availability.</p>
+                    <p>Invite clients directly with a personalized code or share your public booking page.</p>
+                    <p><strong>On mobile:</strong> You can do everything on the go. Our Android app is currently in early access—<a href="#">click here to join</a>.</p>
                   </p>
                 </div>
               </CollapsibleContent>
             </Card>
           </Collapsible>
+
+          <Collapsible className="group">
+            <Card className="border-mint/10 hover:border-mint-dark/20 transition-colors">
+              <CollapsibleTrigger className="w-full p-6 text-left">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
+                    How secure is my data and my clients’ data on SereneNow?
+                  </h3>
+                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6">
+                  <p className="text-charcoal/80 leading-relaxed">
+                    Your data’s safety is our top priority. SereneNow uses enterprise-grade encryption and strict security measures to protect both you and your clients. 
+                    Sensitive information like health records, payment details, and personal info remain private and are never shared without your consent. We don’t sell or misuse your data ever.
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          <Collapsible className="group">
+            <Card className="border-mint/10 hover:border-mint-dark/20 transition-colors">
+              <CollapsibleTrigger className="w-full p-6 text-left">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
+                    Why should mental health professionals use SereneNow?
+                  </h3>
+                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6">
+                  <p className="text-charcoal/80 leading-relaxed">
+                    Because your time and focus are better spent with your clients, not on admin tasks. SereneNow handles scheduling, reminders, and payments so you don’t have to. 
+                    It also keeps your personal details — like phone number, WhatsApp, or bank info — private unless you choose to share them. No more chasing payments, no more double bookings, no more endless spreadsheets. 
+                    It’s like having a practice manager in your pocket.
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          <Collapsible className="group">
+            <Card className="border-mint/10 hover:border-mint-dark/20 transition-colors">
+              <CollapsibleTrigger className="w-full p-6 text-left">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
+                    What’s with the name SereneNow?
+                  </h3>
+                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6">
+                  <p className="text-charcoal/80 leading-relaxed">
+                    We’re huge Seinfeld fans. Remember when Mr. Costanza shouted “Serenity Now!” to find calm in the chaos? That’s exactly what SereneNow helps you do — bring calm, structure, and ease to your practice. 
+                    Unlike George’s dad, you’ll actually get serenity now. 😉
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          <Collapsible className="group">
+            <Card className="border-mint/10 hover:border-mint-dark/20 transition-colors">
+              <CollapsibleTrigger className="w-full p-6 text-left">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
+                    How do payments work on SereneNow?
+                  </h3>
+                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6">
+                  <p className="text-charcoal/80 leading-relaxed">
+                    Clients can pay you directly or through SereneNow’s integrated system. 
+                    If you use SereneNow’s system, we’ll handle invoices, client receipts, automatic appointment confirmation with invites, and payouts securely. 
+                    This saves you from chasing payments and keeps everything properly tracked.
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          <Collapsible className="group">
+            <Card className="border-mint/10 hover:border-mint-dark/20 transition-colors">
+              <CollapsibleTrigger className="w-full p-6 text-left">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
+                    Can clients book with me without downloading the app?
+                  </h3>
+                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6">
+                  <p className="text-charcoal/80 leading-relaxed">
+                    Yes! Clients don’t need to download the app or create account with SereneNow to book with you. 
+                    You can share a personalized client specific booking page, where they can view service assigned to them, check availability, and confirm sessions instantly. 
+                    Or can share your unique public booking page with all your services
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          <Collapsible className="group">
+            <Card className="border-mint/10 hover:border-mint-dark/20 transition-colors">
+              <CollapsibleTrigger className="w-full p-6 text-left">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
+                    Is SereneNow free to use?
+                  </h3>
+                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6">
+                  <p className="text-charcoal/80 leading-relaxed">
+                    Yes, our Free Forever plan lets you run your practice with one service included. 
+                    If you need additional features check our Pricing section.
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          <Collapsible className="group">
+            <Card className="border-mint/10 hover:border-mint-dark/20 transition-colors">
+              <CollapsibleTrigger className="w-full p-6 text-left">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
+                    What platforms does SereneNow work on?
+                  </h3>
+                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6">
+                  <p className="text-charcoal/80 leading-relaxed">
+                    SereneNow works on web and mobile. 
+                    You can manage your practice from your desktop or on the go with the mobile app (Android available now, iOS coming soon).
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          <Collapsible className="group">
+            <Card className="border-mint/10 hover:border-mint-dark/20 transition-colors">
+              <CollapsibleTrigger className="w-full p-6 text-left">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-charcoal group-hover:text-mint-dark transition-colors">
+                    Does SereneNow provide customer support?
+                  </h3>
+                  <ChevronDown className="h-5 w-5 text-charcoal/60 group-data-[state=open]:rotate-180 transition-transform" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6">
+                  <p className="text-charcoal/80 leading-relaxed">
+                    Absolutely. We’re here to help with setup, troubleshooting, and tips on running your practice smoothly. You can reach us anytime through the support section in the app.
+                  </p>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+      
         </div>
       </section>
 
@@ -464,16 +637,13 @@ export default function LandingPage() {
                 </div>
                 {/* Social Media Icons */}
                 <div className="flex space-x-4">
-                  <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
-                    <Facebook className="h-5 w-5 text-white" />
-                  </a>
                   <a href="https://x.com/serenenowapp" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
                     <Twitter className="h-5 w-5 text-white" />
                   </a>
                   <a href="https://www.instagram.com/serenenowapp" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
                     <Instagram className="h-5 w-5 text-white" />
                   </a>
-                  <a href="#" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
+                  <a href="https://www.linkedin.com/company/serenenow" className="bg-charcoal p-2 rounded-full hover:bg-mint-dark transition-colors">
                     <Linkedin className="h-5 w-5 text-white" />
                   </a>
                 </div>
