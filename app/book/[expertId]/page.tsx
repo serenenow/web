@@ -19,6 +19,7 @@ import {
   convertTimeToTimezone,
   formatTime,
 } from "@/lib/utils/time-utils"
+import { logger } from "@/lib/utils/logger"
 
 interface ClientBookingPageProps {
   params: Promise<{ expertId: string }>
@@ -150,7 +151,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
           setPaymentMode("online")
         }
       } catch (err) {
-        console.error("Failed to load payment options:", err)
+        logger.error("Failed to load payment options:", err)
         // Default to allowing both options if API fails
         setPaymentOptions({ allowDirectPayment: true, directPaymentNotes: null })
       }
@@ -165,7 +166,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
         setCurrentStep("date")
       }
     } catch (err: any) {
-      console.error("Failed to load booking data:", err)
+      logger.error("Failed to load booking data:", err)
       setError(err.message || "Failed to load booking information")
     } finally {
       setLoading(false)
@@ -231,7 +232,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
 
           setAvailableTimeSlots(convertedSlots)
         } catch (err) {
-          console.error("Failed to load time slots:", err)
+          logger.error("Failed to load time slots:", err)
         }
       }
 
@@ -258,7 +259,7 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
       const formattedTime = formatTime(convertedTime)
       return formattedTime
     } catch (error) {
-      console.error("Error converting time:", error)
+      logger.error("Error converting time:", error)
       return isoString
     }
   }

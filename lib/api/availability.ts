@@ -1,5 +1,6 @@
 import { apiRequest } from "./base"
 import { getBrowserTimezone, formatTime12Hour, convertTimeToTimezone, timezones, formatTime } from "../utils/time-utils"
+import { logger } from "../utils/logger"
 
 /**
  * Enum for days of the week (1-7, Monday to Sunday)
@@ -66,7 +67,7 @@ export const getExpertAvailability = async (expertId: string): Promise<Availabil
     })
     return response as AvailabilityDto[]
   } catch (error) {
-    console.error("Error fetching expert availability:", error)
+    logger.error("Error fetching expert availability:", error)
     throw error
   }
 }
@@ -85,7 +86,7 @@ export const updateExpertAvailability = async (expertId: string, data: Availabil
     })
     return response
   } catch (error) {
-    console.error("Error updating expert availability:", error)
+    logger.error("Error updating expert availability:", error)
     throw error
   }
 }

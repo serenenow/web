@@ -15,6 +15,7 @@ import { type VerifyCodeResponse, getCachedBookingData, clearCachedBookingData }
 import { useClientData } from "@/hooks/use-client-data"
 import { getBrowserTimezone } from "@/lib/utils/time-utils"
 import { clearClientData } from "@/lib/api/client-auth"
+import { logger } from "@/lib/utils/logger"
 
 const GENDERS = [
   { value: "MALE", label: "Male" },
@@ -234,7 +235,7 @@ export default function ClientRegistrationPage() {
       // Proceed to service selection or booking
       router.push(`/book/${bookingData.expertProfile.id}?clientCode=${clientCode}`)
     } catch (error: any) {
-      console.error("Profile update error:", error)
+      logger.error("Profile update error:", error)
       toast({
         title: "Profile update failed",
         description: error.message || "Failed to update profile. Please try again.",

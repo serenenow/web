@@ -6,24 +6,47 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { SetupChecklist } from "@/components/setup-checklist"
 import { DashboardContent } from "@/components/dashboard-content"
 import { getAuthToken, getExpertData } from "@/lib/api/auth"
-import { fetchDashboardData, DashboardData } from "@/lib/api/dashboard"
+import { fetchDashboardData, type DashboardData } from "@/lib/api/dashboard"
 import { STORAGE_KEYS, plainLocalStorage } from "@/lib/utils/secure-storage"
+import { Button } from "@/components/ui/button"
+import { Link } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { logger } from "@/lib/utils/logger"
 
 export default function DashboardPage() {
   const [user, setUser] = useState({
     name: "",
     email: "",
-    id: ""
+    id: "",
   })
 
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     services: [],
     appointments: [],
-    isNewUser: true
+    isNewUser: true,
   })
   const [isSetupProfile, setupProfile] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const { toast } = useToast()
+
+  const handleShareProfile = async () => {
+    try {
+      const profileLink = `${window.location.origin}/public-book/${user.id}`
+      await navigator.clipboard.writeText(profileLink)
+      toast({
+        title: "Success",
+        description: "Public profile link copied!",
+      })
+    } catch (error) {
+      logger.error("Failed to copy link:", error)
+      toast({
+        title: "Error",
+        description: "Failed to copy link. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
 
   useEffect(() => {
     // Check authentication and load user data
@@ -42,18 +65,18 @@ export default function DashboardPage() {
           setUser({
             name: expertData.name,
             email: expertData.email,
-            id: expertData.id
+            id: expertData.id,
           })
-          
+
           // Fetch dashboard data using expert ID
           const data = await fetchDashboardData(expertData.id)
           setDashboardData(data)
-          let hasServiceSetup = data.services.length > 0
+          const hasServiceSetup = data.services.length > 0
           setupProfile(hasServiceSetup)
           plainLocalStorage.setItem(STORAGE_KEYS.EXPERT_SETUP_PROFILE_COMPLETE, hasServiceSetup)
         }
       } catch (error) {
-        console.error("Auth check error:", error)
+        logger.error("Auth check error:", error)
         router.push("/login")
       } finally {
         setIsLoading(false)
@@ -102,22 +125,41 @@ export default function DashboardPage() {
         <div className="p-4 md:p-6">
           {/* Header */}
           <div className="mb-6 md:mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold text-charcoal mb-2">
-              {isSetupProfile ? `Welcome back, ${user.name.split(" ")[0]}! 👋` : "Welcome to SereneNow! 👋"}
-            </h1>
-            <p className="text-charcoal/70 text-sm md:text-base">
-              {isSetupProfile
-                ? "Here's what's happening with your practice today."
-                : "Let's get your practice set up and ready for clients."}
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-2xl md:text-3xl font-bold text-charcoal mb-2">
+                  {isSetupProfile ? `Welcome back, ${user.name.split(" ")[0]}! 👋` : "Welcome to SereneNow! 👋"}
+                </h1>
+                <p className="text-charcoal/70 text-sm md:text-base">
+                  {isSetupProfile
+                    ? "Here's what's happening with your practice today."
+                    : "Let's get your practice set up and ready for clients."}
+                </p>
+              </div>
+              {isSetupProfile && (
+                <Button
+                  onClick={handleShareProfile}
+                  variant="outline"
+                  className="border-mint/30 hover:bg-mint/10 bg-transparent"
+                >
+                  <Link className="h-4 w-4 mr-2" />
+                  Share Profile
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Content */}
-          {isSetupProfile != true ? <SetupChecklist onStepClick={handleSetupStep} /> : <DashboardContent 
-            isNewUser={false}
-            services={dashboardData.services}
-            appointments={dashboardData.appointments}
-          />}
+          {isSetupProfile != true ? (
+            <SetupChecklist onStepClick={handleSetupStep} />
+          ) : (
+            <DashboardContent
+              isNewUser={false}
+              services={dashboardData.services}
+              appointments={dashboardData.appointments}
+              expertId={user.id}
+            />
+          )}
         </div>
       </main>
     </div>

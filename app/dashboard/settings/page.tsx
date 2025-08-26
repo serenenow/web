@@ -42,15 +42,15 @@ export default function SettingsPage() {
   })
 
   const handleSaveProfile = () => {
-    console.log("Saving profile:", profile)
+    logger.log("Saving profile:", profile)
   }
 
   const handleSaveNotifications = () => {
-    console.log("Saving notifications:", notifications)
+    logger.log("Saving notifications:", notifications)
   }
 
   const handleSaveBankDetails = () => {
-    console.log("Saving bank details:", bankDetails)
+    logger.log("Saving bank details:", bankDetails)
   }
 
   return (

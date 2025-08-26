@@ -94,14 +94,14 @@ export default function VerifyCodePage() {
       })
 
       // Check if profile setup is needed
-      console.log("Has set profile "+ response.hasSetupProfile);
+      logger.log("Has set profile "+ response.hasSetupProfile);
       if (response.hasSetupProfile) {
         router.push("/dashboard")
       } else {
         router.push("/onboarding/profile")
       }
     } catch (error: any) {
-      console.error("Verify code error:", error)
+      logger.error("Verify code error:", error)
       toast({
         title: "Verification failed",
         description: error.message || "Invalid verification code. Please try again.",
@@ -141,7 +141,7 @@ export default function VerifyCodePage() {
         description: "A new verification code has been sent to your email.",
       })
     } catch (error: any) {
-      console.error("Resend code error:", error)
+      logger.error("Resend code error:", error)
       toast({
         title: "Failed to resend",
         description: error.message || "Failed to resend verification code. Please try again.",

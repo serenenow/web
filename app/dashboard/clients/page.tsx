@@ -15,6 +15,7 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { getExpertData } from "@/lib/api/auth"
 import { ActivationStatus, AuthSource, Client, SendClientInviteRequest, getExpertClients, sendClientInvite } from "@/lib/api/client"
 import { getExpertServices, type Service } from "@/lib/api/service"
+import { logger } from "@/lib/utils/logger"
 
 interface ServiceDisplay {
   id: string
@@ -125,7 +126,7 @@ export default function ClientsPage() {
       }
 
       if (!expertId) {
-        console.error("No expert ID available")
+        logger.error("No expert ID available")
         setIsLoading(false)
         return
       }
@@ -133,7 +134,7 @@ export default function ClientsPage() {
       const fetchedClients = await getExpertClients(expertId)
       setClients(fetchedClients)
     } catch (error) {
-      console.error("Failed to fetch clients:", error)
+      logger.error("Failed to fetch clients:", error)
       // Show error message to user
       alert("Failed to fetch clients. Please try again.")
     } finally {
@@ -152,7 +153,7 @@ export default function ClientsPage() {
       }
 
       if (!expertId) {
-        console.error("No expert ID available")
+        logger.error("No expert ID available")
         setLoadingServices(false)
         return
       }
@@ -170,7 +171,7 @@ export default function ClientsPage() {
 
       setServices(serviceDisplays)
     } catch (error) {
-      console.error("Failed to fetch services:", error)
+      logger.error("Failed to fetch services:", error)
       // Show error message to user
       alert("Failed to fetch services. Please try again.")
     } finally {
@@ -209,7 +210,7 @@ export default function ClientsPage() {
       }
 
       if (!expertId) {
-        console.error("No expert ID available")
+        logger.error("No expert ID available")
         alert("Unable to send invitation. Please try again later.")
         setIsSubmitting(false)
         return
@@ -252,7 +253,7 @@ export default function ClientsPage() {
         setInviteSuccess(false)
       }, 3000)
     } catch (error) {
-      console.error("Failed to send client invitation:", error)
+      logger.error("Failed to send client invitation:", error)
       alert("Failed to send invitation. Please try again.")
     } finally {
       setIsSubmitting(false)

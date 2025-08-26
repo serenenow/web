@@ -32,7 +32,7 @@ function decrypt(encryptedData: string): string {
         .join('')
     );
   } catch (error) {
-    console.error('Failed to decrypt data:', error);
+    logger.error('Failed to decrypt data:', error);
     return ''; // Return empty string on failure
   }
 }
@@ -79,7 +79,7 @@ export const secureLocalStorage = {
       
       return item.value;
     } catch (error) {
-      console.error(`Error retrieving item ${key} from secure storage:`, error);
+      logger.error(`Error retrieving item ${key} from secure storage:`, error);
       return null;
     }
   },
@@ -131,7 +131,7 @@ export const secureSessionStorage = {
       
       return item.value;
     } catch (error) {
-      console.error(`Error retrieving item ${key} from secure storage:`, error);
+      logger.error(`Error retrieving item ${key} from secure storage:`, error);
       return null;
     }
   },
@@ -160,7 +160,7 @@ export const plainLocalStorage = {
         localStorage.setItem(key, JSON.stringify(value));
       }
     } catch (error) {
-      console.error(`Error storing item ${key} in plain storage:`, error);
+      logger.error(`Error storing item ${key} in plain storage:`, error);
     }
   },
   
@@ -179,7 +179,7 @@ export const plainLocalStorage = {
         return value as unknown as T;
       }
     } catch (error) {
-      console.error(`Error retrieving item ${key} from plain storage:`, error);
+      logger.error(`Error retrieving item ${key} from plain storage:`, error);
       return null;
     }
   },
@@ -203,7 +203,7 @@ export const plainSessionStorage = {
         sessionStorage.setItem(key, JSON.stringify(value));
       }
     } catch (error) {
-      console.error(`Error storing item ${key} in plain session storage:`, error);
+      logger.error(`Error storing item ${key} in plain session storage:`, error);
     }
   },
   
@@ -222,7 +222,7 @@ export const plainSessionStorage = {
         return value as unknown as T;
       }
     } catch (error) {
-      console.error(`Error retrieving item ${key} from plain session storage:`, error);
+      logger.error(`Error retrieving item ${key} from plain session storage:`, error);
       return null;
     }
   },
@@ -248,7 +248,7 @@ export function clearAllStorage(): void {
   localStorage.clear();
   sessionStorage.clear();
   
-  console.log('All storage data cleared');
+  logger.log('All storage data cleared');
 }
 
 // Constants for storage keys to avoid typos and duplication

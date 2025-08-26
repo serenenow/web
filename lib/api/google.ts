@@ -19,7 +19,7 @@ export async function getGoogleConnectionStatus(expertId: string): Promise<Googl
       method: "GET",
     })
   } catch (error) {
-    console.error("Failed to get Google connection status:", error)
+    logger.error("Failed to get Google connection status:", error)
     // Return default status when API call fails
     return {
       isConnected: false,

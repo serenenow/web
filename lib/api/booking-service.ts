@@ -11,7 +11,6 @@ import type { ServiceDetailDto } from "@/lib/api/service"
 import { storePaymentSession } from "@/lib/utils/secure-payment"
 import { createBookingValidationSchema, validateObject, isValidString, isValidDateString, isValidTimeString } from "@/lib/utils/validation"
 import { logger } from "@/lib/utils/logger"
-import { log } from "console"
 
 export interface BookingData {
   expertId: string

@@ -83,6 +83,29 @@ export interface CreateProfileResponse {
   error?: string
 }
 
+export interface BookingLinkRequest {
+  expertId: string
+  clientEmail: string
+}
+
+export interface BookingLinkResponse {
+  link: string
+}
+
+export async function sendBookingLink(request: BookingLinkRequest): Promise<BookingLinkResponse> {
+  return await apiRequest<BookingLinkResponse>("/send-email/booking-link", {
+    method: "POST",
+    body: JSON.stringify(request),
+  })
+}
+
+export async function generateBookingLink(request: BookingLinkRequest): Promise<BookingLinkResponse> {
+  return await apiRequest<BookingLinkResponse>("/expert/generate-booking-link/client", {
+    method: "POST",
+    body: JSON.stringify(request),
+  })
+}
+
 export async function createExpertProfile(profileData: {
   firstName: string
   lastName: string
@@ -162,17 +185,4 @@ export async function createExpertProfile(profileData: {
   } catch (error: any) {
     throw error
   }
-}
-
-export async function getUserProfile(): Promise<any> {
-  return await apiRequest("/users/profile", {
-    method: "GET",
-  })
-}
-
-export async function updateUserProfile(profileData: any): Promise<any> {
-  return await apiRequest("/users/profile", {
-    method: "PUT",
-    body: JSON.stringify(profileData),
-  })
 }

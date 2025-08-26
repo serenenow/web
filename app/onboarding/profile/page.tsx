@@ -190,7 +190,7 @@ export default function ProfileOnboardingPage() {
 
       router.push("/dashboard")
     } catch (error: any) {
-      console.error("Profile creation error:", error)
+      logger.error("Profile creation error:", error)
       toast({
         title: "Something went wrong",
         description: error.message || "Failed to create profile. Please try again.",

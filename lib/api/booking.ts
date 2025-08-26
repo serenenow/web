@@ -248,14 +248,22 @@ export const handleRazorpayPayment = async (
       throw new Error("Razorpay SDK not available")
     }
 
-    // Debug logging
     const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    logger.info("Razorpay Key ID:", razorpayKey ? `${razorpayKey.substring(0, 12)}...` : 'NOT SET');
-    logger.info("Order ID:", orderId);
     
     // Validate required fields
     if (!razorpayKey) {
       throw new Error("Razorpay Key ID not configured");
+    }
+    
+    // Validate key format (Razorpay Key IDs start with 'rzp_test_' or 'rzp_live_')
+    if (!razorpayKey.startsWith('rzp_')) {
+      throw new Error("Invalid Razorpay Key ID format");
+    }
+    
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      logger.info("Razorpay Key ID:", `${razorpayKey.substring(0, 12)}...`);
+      logger.info("Order ID:", orderId);
     }
     
     if (!orderId) {

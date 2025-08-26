@@ -52,7 +52,7 @@ function SidebarContent({ user, onNavigate }: { user: DashboardSidebarProps["use
       clearAllStorage()
       router.push("/login")
     } catch (error) {
-      console.error("Logout error:", error)
+      logger.error("Logout error:", error)
       window.location.href = "/login"
     }
   }

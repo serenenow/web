@@ -54,7 +54,7 @@ export function getCachedBookingData(clientCode: string): VerifyCodeResponse | n
 
     return data
   } catch (error) {
-    console.error("Error reading cached booking data:", error)
+    logger.error("Error reading cached booking data:", error)
     return null
   }
 }
@@ -75,6 +75,6 @@ export function updateCachedBookingData(clientCode: string, updates: Partial<Ver
       localStorage.setItem(`${CACHE_KEY_PREFIX}${clientCode}`, JSON.stringify(cacheData))
     }
   } catch (error) {
-    console.error("Error updating cached booking data:", error)
+    logger.error("Error updating cached booking data:", error)
   }
 }

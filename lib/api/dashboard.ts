@@ -31,7 +31,7 @@ export async function fetchDashboardData(expertId: string): Promise<DashboardDat
       isNewUser
     }
   } catch (error) {
-    console.error("Error fetching dashboard data:", error)
+    logger.error("Error fetching dashboard data:", error)
     // Return empty data on error
     return {
       services: [],
@@ -52,7 +52,7 @@ export async function fetchExpertServices(expertId: string): Promise<ServiceDto[
       method: "GET"
     })
   } catch (error) {
-    console.error("Error fetching expert services:", error)
+    logger.error("Error fetching expert services:", error)
     return []
   }
 }
@@ -68,7 +68,7 @@ export async function fetchUpcomingAppointments(expertId: string): Promise<Exper
       method: "GET"
     })
   } catch (error) {
-    console.error("Error fetching upcoming appointments:", error)
+    logger.error("Error fetching upcoming appointments:", error)
     return []
   }
 }
@@ -84,7 +84,7 @@ export function getStoredExpertData(): ExpertDto | null {
     
     return JSON.parse(expertDataString) as ExpertDto
   } catch (error) {
-    console.error("Error retrieving expert data from localStorage:", error)
+    logger.error("Error retrieving expert data from localStorage:", error)
     return null
   }
 }

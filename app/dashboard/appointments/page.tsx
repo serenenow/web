@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/appointments"
 import { getExpertData } from "@/lib/api/auth"
 import { format, parseISO } from "date-fns"
+import { logger } from "@/lib/utils/logger"
 
 export default function AppointmentsPage() {
   const [user, setUser] = useState({
@@ -35,7 +36,7 @@ export default function AppointmentsPage() {
       const data = await fetchAllAppointments()
       setAppointments(data)
     } catch (error) {
-      console.error("Error approving appointment:", error)
+      logger.error("Error approving appointment:", error)
     }
   }
 
@@ -46,7 +47,7 @@ export default function AppointmentsPage() {
       const data = await fetchAllAppointments()
       setAppointments(data)
     } catch (error) {
-      console.error("Error declining appointment:", error)
+      logger.error("Error declining appointment:", error)
     }
   }
 
@@ -68,7 +69,7 @@ export default function AppointmentsPage() {
         setAppointments(data)
         setError(null)
       } catch (err) {
-        console.error("Error fetching appointments:", err)
+        logger.error("Error fetching appointments:", err)
         setError("Failed to load appointments. Please try again.")
       } finally {
         setLoading(false)

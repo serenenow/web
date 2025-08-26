@@ -33,7 +33,7 @@ export function useExpertData() {
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to load expert data"))
-      console.error("Error loading expert data:", err)
+      logger.error("Error loading expert data:", err)
     } finally {
       setIsLoading(false)
     }

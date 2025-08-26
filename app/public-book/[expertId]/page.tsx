@@ -22,6 +22,7 @@ import {
   convertTimeToTimezone,
   formatTime,
 } from "@/lib/utils/time-utils"
+import { logger } from "@/lib/utils/logger"
 
 interface PublicBookingPageProps {
   params: Promise<{ expertId: string }>
@@ -115,7 +116,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
           setCurrentStep("date")
         }
       } catch (err) {
-        console.error("Failed to load expert data:", err)
+        logger.error("Failed to load expert data:", err)
         setError("Failed to load expert information")
       } finally {
         setLoading(false)
@@ -176,7 +177,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
 
           setAvailableTimeSlots(convertedSlots)
         } catch (err) {
-          console.error("Failed to load time slots:", err)
+          logger.error("Failed to load time slots:", err)
         } finally {
           setSlotsLoading(false)
         }
@@ -205,7 +206,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
       const formattedTime = formatTime(convertedTime)
       return formattedTime
     } catch (error) {
-      console.error("Error converting time:", error)
+      logger.error("Error converting time:", error)
       return isoString
     }
   }

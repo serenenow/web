@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { sendVerificationCode } from "@/lib/api/auth"
+import { logger } from "@/lib/utils/logger"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -57,7 +58,7 @@ export default function LoginPage() {
       // Navigate to verify code page with email parameter
       router.push(`/verify-code?email=${encodeURIComponent(email)}`)
     } catch (error: any) {
-      console.error("Send verification code error:", error)
+      logger.error("Send verification code error:", error)
       toast({
         title: "Something went wrong",
         description: error.message || "Failed to send verification code. Please try again.",

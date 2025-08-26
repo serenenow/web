@@ -36,7 +36,7 @@ export function useClientData(): UseClientDataReturn {
       setAuthToken(token)
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Failed to load client data"))
-      console.error("Error loading client data:", err)
+      logger.error("Error loading client data:", err)
     } finally {
       setIsLoading(false)
     }

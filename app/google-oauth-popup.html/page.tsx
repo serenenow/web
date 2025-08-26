@@ -65,13 +65,13 @@ export default function GoogleOAuthPopupPage() {
           })
 
           const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
-          console.log("AUth URL "+ authUrl)
+          logger.log("AUth URL "+ authUrl)
 
           // Redirect to Google OAuth
           window.location.href = authUrl
         }
       } catch (error) {
-        console.error("Error initiating Google auth:", error)
+        logger.error("Error initiating Google auth:", error)
         showError("Failed to connect to Google. Please try again.")
       }
     }
@@ -96,7 +96,7 @@ export default function GoogleOAuthPopupPage() {
       const state = urlParams.get("state")
 
       if (error) {
-        console.error("OAuth error:", error)
+        logger.error("OAuth error:", error)
         showError(`Authentication failed: ${error}`)
         return
       }

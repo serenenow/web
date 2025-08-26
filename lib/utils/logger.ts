@@ -62,22 +62,22 @@ function createLogger(): Logger {
   return {
     debug: (message: string, ...args: any[]) => {
       if (getLogLevel() >= LogLevel.DEBUG) {
-        console.debug(`[DEBUG] ${message}`, ...args);
+        logger.debug(`[DEBUG] ${message}`, ...args);
       }
     },
     info: (message: string, ...args: any[]) => {
       if (getLogLevel() >= LogLevel.INFO) {
-        console.info(`[INFO] ${message}`, ...args);
+        logger.info(`[INFO] ${message}`, ...args);
       }
     },
     warn: (message: string, ...args: any[]) => {
       if (getLogLevel() >= LogLevel.WARN) {
-        console.warn(`[WARN] ${message}`, ...args);
+        logger.warn(`[WARN] ${message}`, ...args);
       }
     },
     error: (message: string, ...args: any[]) => {
       if (getLogLevel() >= LogLevel.ERROR) {
-        console.error(`[ERROR] ${message}`, ...args);
+        logger.error(`[ERROR] ${message}`, ...args);
       }
     }
   };

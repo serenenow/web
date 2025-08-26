@@ -62,7 +62,7 @@ export default function ServicesPage() {
 
   const checkGoogleStatus = async () => {
     if (!user.id) {
-      console.error("Expert Id is not set")
+      logger.error("Expert Id is not set")
       return
     }
 
@@ -70,7 +70,7 @@ export default function ServicesPage() {
       const status = await getGoogleConnectionStatus(user.id)
       setGoogleStatus(status)
     } catch (error) {
-      console.error("Failed to check Google status:", error)
+      logger.error("Failed to check Google status:", error)
 
       // Set default status when API call fails (including 404 not found)
       setGoogleStatus({
@@ -138,7 +138,7 @@ export default function ServicesPage() {
             // Show success message
             alert("Google account connected successfully!")
           } catch (error) {
-            console.error("Failed to exchange auth code:", error)
+            logger.error("Failed to exchange auth code:", error)
             alert("Failed to complete Google connection. Please try again.")
           } finally {
             // Clean up event listener
@@ -146,7 +146,7 @@ export default function ServicesPage() {
             setIsConnectingGoogle(false)
           }
         } else if (event.data.type === "GOOGLE_OAUTH_ERROR") {
-          console.error("OAuth error:", event.data.error)
+          logger.error("OAuth error:", event.data.error)
           alert("Failed to connect Google account. Please try again.")
           window.removeEventListener("message", handleMessage)
           setIsConnectingGoogle(false)
@@ -165,7 +165,7 @@ export default function ServicesPage() {
         }
       }, 1000)
     } catch (error) {
-      console.error("Failed to connect to Google:", error)
+      logger.error("Failed to connect to Google:", error)
       alert(error instanceof Error ? error.message : "Failed to connect to Google. Please try again.")
       setIsConnectingGoogle(false)
     }
@@ -173,7 +173,7 @@ export default function ServicesPage() {
 
   const fetchServices = async () => {
     if (!user.id) {
-      console.error("No expert ID available")
+      logger.error("No expert ID available")
       return
     }
 
@@ -182,7 +182,7 @@ export default function ServicesPage() {
       const fetchedServices = await getExpertServices(user.id)
       setServices(fetchedServices)
     } catch (error) {
-      console.error("Failed to fetch services:", error)
+      logger.error("Failed to fetch services:", error)
       // Show error message to user - consider using a toast notification instead of alert in production
       alert("Failed to fetch services. Please try again.")
     } finally {
@@ -194,7 +194,7 @@ export default function ServicesPage() {
     e.preventDefault()
 
     if (!user.id) {
-      console.error("Expert ID is not available")
+      logger.error("Expert ID is not available")
       alert("You must be logged in to add a service")
       return
     }
@@ -247,7 +247,7 @@ export default function ServicesPage() {
       setShowAddForm(false)
       setShowGooglePrompt(false)
     } catch (error) {
-      console.error("Failed to add service:", error)
+      logger.error("Failed to add service:", error)
       // Show error message to user
       alert("Failed to add service. Please try again.")
     }
