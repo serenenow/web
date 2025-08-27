@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger'
 import { NextApiRequest, NextApiResponse } from 'next'
 
 const API_BASE_URL = 'https://kmp-production.up.railway.app/serenenow/api/v1'

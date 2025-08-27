@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { getExpertData } from "@/lib/api/auth"
+import { logger } from "@/lib/utils/logger"
 
 export interface ExpertData {
   id: string

@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { STORAGE_KEYS, clearAllStorage } from "@/lib/utils/secure-storage"
+import { logger } from "@/lib/utils/logger"
 
 const navigationItems = [
   { name: "Dashboard", href: "/dashboard", icon: Home },

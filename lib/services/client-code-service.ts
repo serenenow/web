@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/base"
 import { type ClientResponse } from "@/lib/api/client-auth"
 import { ExpertProfileResponse } from "@/lib/api/users"
 import { ServiceDetailDto } from "../api/service"
+import { logger } from "../utils/logger"
 
 export interface VerifyCodeRequest {
   code: string

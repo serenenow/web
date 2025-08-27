@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { verifyCode, sendVerificationCode, setAuthToken, setExpertData } from "@/lib/api/auth"
+import { logger } from "@/lib/utils/logger"
 
 export default function VerifyCodePage() {
   const [code, setCode] = useState("")
@@ -94,7 +95,7 @@ export default function VerifyCodePage() {
       })
 
       // Check if profile setup is needed
-      logger.log("Has set profile "+ response.hasSetupProfile);
+      logger.info("Has set profile "+ response.hasSetupProfile);
       if (response.hasSetupProfile) {
         router.push("/dashboard")
       } else {

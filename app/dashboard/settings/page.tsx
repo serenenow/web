@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
+import { logger } from "@/lib/utils/logger"
 
 export default function SettingsPage() {
   const [user] = useState({
@@ -42,15 +43,15 @@ export default function SettingsPage() {
   })
 
   const handleSaveProfile = () => {
-    logger.log("Saving profile:", profile)
+    logger.info("Saving profile:", profile)
   }
 
   const handleSaveNotifications = () => {
-    logger.log("Saving notifications:", notifications)
+    logger.info("Saving notifications:", notifications)
   }
 
   const handleSaveBankDetails = () => {
-    logger.log("Saving bank details:", bankDetails)
+    logger.info("Saving bank details:", bankDetails)
   }
 
   return (

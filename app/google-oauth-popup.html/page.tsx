@@ -1,5 +1,6 @@
 "use client"
 
+import { logger } from "@/lib/utils/logger"
 import { useEffect } from "react"
 
 export default function GoogleOAuthPopupPage() {
@@ -65,7 +66,7 @@ export default function GoogleOAuthPopupPage() {
           })
 
           const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
-          logger.log("AUth URL "+ authUrl)
+          logger.info("AUth URL "+ authUrl)
 
           // Redirect to Google OAuth
           window.location.href = authUrl

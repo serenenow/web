@@ -6,6 +6,7 @@ import {
   type ClientDto, 
   type ClientResponse 
 } from "@/lib/api/client-auth"
+import { logger } from "@/lib/utils/logger"
 
 export interface UseClientDataReturn {
   clientData: ClientDto | null

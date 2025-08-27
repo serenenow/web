@@ -3,6 +3,8 @@
  * Provides both encrypted and plain storage options for localStorage/sessionStorage
  */
 
+import { logger } from "./logger";
+
 // Simple encryption using Base64 + basic obfuscation
 // Note: This is not true encryption but provides basic obfuscation
 // For true encryption, a library like CryptoJS would be needed

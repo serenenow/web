@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { createExpertProfile } from "@/lib/api/users"
 import { legacyTimezones } from "@/lib/utils/time-utils"
+import { logger } from "@/lib/utils/logger"
 
 // Constants for dropdown options
 const QUALIFICATIONS = [

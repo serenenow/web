@@ -2,6 +2,7 @@
 import { apiRequest } from "./base"
 import { ExpertDto, ServiceDto } from "./users"
 import { type ExpertAppointment } from "./appointments"
+import { logger } from "../utils/logger"
 
 export interface DashboardData {
   services: ServiceDto[]

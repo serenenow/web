@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/google"
 import { addService, getExpertServices, type ServiceAddRequest, type Service, Location } from "@/lib/api/service"
 import { useExpertData } from "@/hooks/use-expert-data"
+import { logger } from "@/lib/utils/logger"
 
 export default function ServicesPage() {
   // Use our custom hook for expert data
