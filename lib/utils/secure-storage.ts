@@ -250,7 +250,7 @@ export function clearAllStorage(): void {
   localStorage.clear();
   sessionStorage.clear();
   
-  logger.log('All storage data cleared');
+  logger.info('All storage data cleared');
 }
 
 // Constants for storage keys to avoid typos and duplication

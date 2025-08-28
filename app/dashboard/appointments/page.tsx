@@ -13,10 +13,13 @@ import {
   declineAppointment,
   type ExpertAppointment,
   fetchAllAppointments,
+  type AppointmentLists,
 } from "@/lib/api/appointments"
 import { getExpertData } from "@/lib/api/auth"
 import { format, parseISO } from "date-fns"
+import { getBrowserTimezone, convertTimeToTimezone, formatTime12Hour } from "@/lib/utils/time-utils"
 import { logger } from "@/lib/utils/logger"
+import { AppointmentStatus, type AppointmentFilter } from "@/lib/types/appointment"
 
 export default function AppointmentsPage() {
   const [user, setUser] = useState({
@@ -24,8 +27,8 @@ export default function AppointmentsPage() {
     email: "",
   })
 
-  const [filter, setFilter] = useState("all")
-  const [appointments, setAppointments] = useState<ExpertAppointment[]>([])
+  const [filter, setFilter] = useState<AppointmentFilter>("upcoming")
+  const [appointmentLists, setAppointmentLists] = useState<AppointmentLists>({ upcoming: [], past: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,7 +37,7 @@ export default function AppointmentsPage() {
       await approveAppointment(appointmentId)
       // Refresh appointments
       const data = await fetchAllAppointments()
-      setAppointments(data)
+      setAppointmentLists(data)
     } catch (error) {
       logger.error("Error approving appointment:", error)
     }
@@ -45,7 +48,7 @@ export default function AppointmentsPage() {
       await declineAppointment(appointmentId)
       // Refresh appointments
       const data = await fetchAllAppointments()
-      setAppointments(data)
+      setAppointmentLists(data)
     } catch (error) {
       logger.error("Error declining appointment:", error)
     }
@@ -66,7 +69,7 @@ export default function AppointmentsPage() {
       try {
         setLoading(true)
         const data = await fetchAllAppointments()
-        setAppointments(data)
+        setAppointmentLists(data)
         setError(null)
       } catch (err) {
         logger.error("Error fetching appointments:", err)
@@ -79,36 +82,76 @@ export default function AppointmentsPage() {
     loadAppointments()
   }, [])
 
+  // Get current appointments based on filter
+  const getCurrentAppointments = (): ExpertAppointment[] => {
+    switch (filter) {
+      case "upcoming":
+        return appointmentLists.upcoming
+      case "past":
+        return appointmentLists.past
+      case "all":
+        return [...appointmentLists.upcoming, ...appointmentLists.past]
+      default:
+        return []
+    }
+  }
+
   // Format appointment data for display
-  const formattedAppointments = appointments.map((appointment) => {
+  const formattedAppointments = getCurrentAppointments().map((appointment) => {
     const startDate = parseISO(appointment.startTime)
-    const endDate = parseISO(appointment.endTime)
+    const userTimeZone = getBrowserTimezone()
+    
+    // Convert time to user's timezone and format as 12-hour
+    const localTime = convertTimeToTimezone(appointment.startTime, userTimeZone)
+    const formattedTime = formatTime12Hour(localTime)
 
     return {
       id: appointment.id,
       client: appointment.client.name,
       service: appointment.service.title,
       date: format(startDate, "MMM d, yyyy"),
-      time: `${format(startDate, "h:mm a")} - ${format(endDate, "h:mm a")}`,
+      time: formattedTime,
+      timeZone: userTimeZone,
       status: appointment.status,
       meetingLink: appointment.meetingLink || null,
       notes: appointment.notes || "",
+      isUpcoming: appointmentLists.upcoming.some(apt => apt.id === appointment.id),
     }
   })
 
-  const filteredAppointments = formattedAppointments.filter((appointment) => {
-    if (filter === "all") return true
-    return appointment.status === filter
-  })
-
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: AppointmentStatus) => {
     switch (status) {
-      case "SCHEDULED":
+      case AppointmentStatus.SCHEDULED:
         return "bg-mint/20 text-mint-dark"
-      case "NEEDS_APPROVAL":
+      case AppointmentStatus.NEEDS_APPROVAL:
         return "bg-yellow-100 text-yellow-800"
+      case AppointmentStatus.COMPLETED:
+        return "bg-green-100 text-green-800"
+      case AppointmentStatus.CANCELLED:
+        return "bg-red-100 text-red-800"
+      case AppointmentStatus.NO_SHOW:
+        return "bg-gray-100 text-gray-800"
+      case AppointmentStatus.PAYMENT_PENDING:
+        return "bg-orange-100 text-orange-800"
+      case AppointmentStatus.PAYMENT_FAILED:
+        return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-600"
+    }
+  }
+
+  const getStatusLabel = (status: AppointmentStatus) => {
+    switch (status) {
+      case AppointmentStatus.NEEDS_APPROVAL:
+        return "Needs Approval"
+      case AppointmentStatus.PAYMENT_PENDING:
+        return "Payment Pending"
+      case AppointmentStatus.PAYMENT_FAILED:
+        return "Payment Failed"
+      case AppointmentStatus.NO_SHOW:
+        return "No Show"
+      default:
+        return status.toLowerCase().replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
     }
   }
 
@@ -135,14 +178,14 @@ export default function AppointmentsPage() {
             <CardContent className="p-4">
               <div className="flex items-center space-x-4">
                 <Filter className="h-4 w-4 text-charcoal/60" />
-                <Select value={filter} onValueChange={setFilter}>
+                <Select value={filter} onValueChange={(value) => setFilter(value as AppointmentFilter)}>
                   <SelectTrigger className="w-48 border-mint/20 focus:border-mint-dark focus:ring-mint-dark">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Appointments</SelectItem>
-                    <SelectItem value="needs_approval">Needs Approval</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="upcoming">Upcoming</SelectItem>
+                    <SelectItem value="past">Past</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -180,7 +223,7 @@ export default function AppointmentsPage() {
           {/* Appointments List */}
           {!loading && !error && (
             <div className="grid gap-4">
-              {filteredAppointments.map((appointment) => (
+              {formattedAppointments.map((appointment) => (
                 <Card key={appointment.id} className="border-mint/20">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
@@ -188,7 +231,7 @@ export default function AppointmentsPage() {
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-lg font-semibold text-charcoal">{appointment.client}</h3>
                           <Badge variant="secondary" className={getStatusColor(appointment.status)}>
-                            {appointment.status === "needs_approval" ? "Needs Approval" : appointment.status}
+                            {getStatusLabel(appointment.status)}
                           </Badge>
                         </div>
 
@@ -199,7 +242,7 @@ export default function AppointmentsPage() {
                           </div>
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-2" />
-                            {appointment.time}
+                            {appointment.time} ({appointment.timeZone})
                           </div>
                           <div>Service: {appointment.service}</div>
                         </div>
@@ -212,7 +255,7 @@ export default function AppointmentsPage() {
                       </div>
 
                       <div className="flex flex-col space-y-2 ml-4">
-                        {appointment.status === "needs_approval" ? (
+                        {appointment.status === AppointmentStatus.NEEDS_APPROVAL && appointment.isUpcoming ? (
                           <div className="flex space-x-2">
                             <Button
                               size="sm"
@@ -250,7 +293,7 @@ export default function AppointmentsPage() {
                 </Card>
               ))}
 
-              {filteredAppointments.length === 0 && (
+              {formattedAppointments.length === 0 && (
                 <Card className="border-mint/20">
                   <CardContent className="p-12 text-center">
                     <div className="w-16 h-16 bg-mint/10 rounded-full flex items-center justify-center mx-auto mb-4">

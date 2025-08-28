@@ -2,6 +2,7 @@
 import { apiRequest } from "./base"
 import { getExpertData } from "./auth"
 import type { ClientDto, ServiceDto } from "./users"
+import { AppointmentStatus } from "@/lib/types/appointment"
 
 export interface ExpertAppointment {
   id: string
@@ -10,16 +11,21 @@ export interface ExpertAppointment {
   client: ClientDto
   service: ServiceDto
   location: string
-  status: string
+  status: AppointmentStatus
   notes?: string
   meetingLink?: string
 }
 
+export interface AppointmentLists {
+  upcoming: ExpertAppointment[]
+  past: ExpertAppointment[]
+}
+
 /**
  * Fetch all appointments for the logged-in expert
- * @returns Promise with array of all appointments (upcoming + past)
+ * @returns Promise with object containing separate upcoming and past appointment arrays
  */
-export async function fetchAllAppointments(): Promise<ExpertAppointment[]> {
+export async function fetchAllAppointments(): Promise<AppointmentLists> {
   try {
     // Fetch both upcoming and past appointments in parallel for better performance
     const [upcomingAppointments, pastAppointments] = await Promise.all([
@@ -27,8 +33,11 @@ export async function fetchAllAppointments(): Promise<ExpertAppointment[]> {
       fetchPastAppointments()
     ])
     
-    // Combine the results
-    return [...upcomingAppointments, ...pastAppointments]
+    // Return separate lists
+    return {
+      upcoming: upcomingAppointments,
+      past: pastAppointments
+    }
   } catch (error) {
     // If one of the requests fails, we could still return partial data
     // But for now, let's re-throw the error to maintain consistent error handling

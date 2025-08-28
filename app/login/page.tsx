@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import Link from "next/link"
 import { ArrowRight, Mail, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -152,7 +153,20 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center">
           <p className="text-xs text-charcoal/50">
-            By continuing, you agree to our Terms of Service and Privacy Policy
+            By continuing, you agree to our{" "}
+            <Link 
+              href="/terms-of-service" 
+              className="text-mint-dark hover:text-mint-dark/80 underline"
+            >
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link 
+              href="/privacy-policy" 
+              className="text-mint-dark hover:text-mint-dark/80 underline"
+            >
+              Privacy Policy
+            </Link>
           </p>
         </div>
       </div>

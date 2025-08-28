@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import type { ServiceDto } from "@/lib/api/users"
 import { sendBookingLink, generateBookingLink } from "@/lib/api/users"
 import type { ExpertAppointment } from "@/lib/api/appointments"
+import { AppointmentStatus } from "@/lib/types/appointment"
 import { format } from "date-fns"
 import { getExpertClients, type Client } from "@/lib/api/client"
 import { logger } from "@/lib/utils/logger"
@@ -180,7 +181,7 @@ export function DashboardContent({ isNewUser, services, appointments, expertId }
                         {formatAppointmentTime(appointment.startTime)}
                       </p>
                     </div>
-                    {appointment.status === "CONFIRMED" && (
+                    {appointment.status === AppointmentStatus.SCHEDULED && (
                       <Button
                         size="sm"
                         variant="outline"
