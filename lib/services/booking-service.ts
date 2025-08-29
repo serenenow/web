@@ -269,7 +269,7 @@ async function createBookingWithPayment(bookingData: {
 
   // Calculate payment amounts
   const amount = bookingData.serviceDetails.price
-  const taxAmount = Math.round(amount * 0.18) // 18% tax
+  const taxAmount = 0
   const platformFee = Math.round(amount * 0.035) // 3.5% platform fee
   const totalAmount = amount + taxAmount + platformFee
 

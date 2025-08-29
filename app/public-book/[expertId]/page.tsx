@@ -331,7 +331,7 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
 
   const platformFee = selectedService ? Math.round(selectedService.price * 0.035) : 0
   const taxes = selectedService ? Math.round(selectedService.price * 0.18) : 0
-  const total = selectedService ? selectedService.price + platformFee + taxes : 0
+  const total = selectedService ? selectedService.price + platformFee : 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light">
@@ -434,10 +434,10 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
                             <span>Platform Fee</span>
                             <span>₹{platformFee}</span>
                           </div>
-                          <div className="flex justify-between text-xs text-charcoal/70">
+                          {/* <div className="flex justify-between text-xs text-charcoal/70">
                             <span>Taxes</span>
                             <span>₹{taxes}</span>
-                          </div>
+                          </div> */}
                           <div className="flex justify-between font-semibold text-sm pt-1 border-t border-mint/20">
                             <span>Total</span>
                             <span>₹{total}</span>
@@ -777,10 +777,10 @@ export default function PublicBookingPage({ params }: PublicBookingPageProps) {
                             <span>Platform Fee (3.5%)</span>
                             <span>₹{platformFee}</span>
                           </div>
-                          <div className="flex justify-between text-charcoal/70">
+                          {/* <div className="flex justify-between text-charcoal/70">
                             <span>Taxes (18%)</span>
                             <span>₹{taxes}</span>
-                          </div>
+                          </div> */}
                           <div className="flex justify-between font-semibold text-lg pt-2 border-t border-mint/20">
                             <span>Total</span>
                             <span>₹{total}</span>
