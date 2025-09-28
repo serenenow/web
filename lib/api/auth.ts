@@ -71,3 +71,31 @@ export function getExpertData(): ExpertDto | null {
   }
   return null
 }
+
+/**
+ * Validates if the current auth token is still valid by making a test API call
+ * Returns true if valid, false if invalid or expired
+ */
+export async function validateAuthToken(): Promise<boolean> {
+  const token = getAuthToken()
+  if (!token) {
+    return false
+  }
+
+  try {
+    // Make a simple API call to validate the token
+    // Using a lightweight endpoint that requires authentication
+    await apiRequest<any>("/token/validate", {
+      method: "GET",
+    })
+    return true
+  } catch (error: any) {
+    // If we get a 401, the token is invalid
+    if (error.status === 401) {
+      return false
+    }
+    // For other errors, we'll assume the token is still valid
+    // (could be network issues, server down, etc.)
+    return true
+  }
+}

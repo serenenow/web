@@ -1,5 +1,5 @@
 import { format, parseISO } from "date-fns"
-import { formatInTimeZone, getTimezoneOffset } from "date-fns-tz"
+import { formatInTimeZone, getTimezoneOffset, fromZonedTime } from "date-fns-tz"
 import { logger } from "./logger"
 
 /**
@@ -181,15 +181,11 @@ export const convertTimeToUTC = (timeStr: string, dateStr: string, sourceTimezon
       time24h = `${hour24.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
     }
     
-    // Create a date object with the time
-    const fullDateTimeStr = `${dateStr}T${time24h}:00`
-    const date = parseISO(fullDateTimeStr)
+    // Create a date object representing the time in the source timezone
+    const localDateTime = parseISO(`${dateStr}T${time24h}:00`)
     
-    // Get timezone offset in milliseconds
-    const tzOffset = getTimezoneOffset(sourceTimezone, date)
-    
-    // Adjust the date by the timezone offset to get UTC
-    const utcDate = new Date(date.getTime() - tzOffset)
+    // Convert from the source timezone to UTC
+    const utcDate = fromZonedTime(localDateTime, sourceTimezone)
     
     // Format to ISO string without Z suffix
     const isoString = utcDate.toISOString()

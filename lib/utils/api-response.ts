@@ -104,7 +104,7 @@ export function handleFetchError(error: any): ApiResponse {
   // Initialize with a non-null error object to avoid TypeScript null checks
   const apiResponse: ApiResponse = {
     data: null,
-    status: 0,
+    status: error.status,
     success: false,
     error: {
       message: "Network error occurred. Please check your connection and try again."

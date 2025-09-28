@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { SetupChecklist } from "@/components/setup-checklist"
 import { DashboardContent } from "@/components/dashboard-content"
-import { getAuthToken, getExpertData } from "@/lib/api/auth"
+import { getAuthToken, getExpertData, removeAuthToken, validateAuthToken } from "@/lib/api/auth"
 import { fetchDashboardData, type DashboardData } from "@/lib/api/dashboard"
 import { STORAGE_KEYS, plainLocalStorage } from "@/lib/utils/secure-storage"
 import { Button } from "@/components/ui/button"
@@ -55,28 +55,65 @@ export default function DashboardPage() {
         const token = getAuthToken()
         const expertData = getExpertData()
 
-        if (!token) {
+        if (!token || !expertData) {
+          router.push("/login")
+          return
+        }
+
+        // Validate if the token is still valid
+        const isValid = await validateAuthToken()
+        if (!isValid) {
+          // Token is invalid, clear storage and redirect to login
+          removeAuthToken()
+          toast({
+            title: "Session expired",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive",
+          })
           router.push("/login")
           return
         }
 
         // Load expert data if available
-        if (expertData) {
-          setUser({
-            name: expertData.name,
-            email: expertData.email,
-            id: expertData.id,
-          })
+        setUser({
+          name: expertData.name,
+          email: expertData.email,
+          id: expertData.id,
+        })
 
-          // Fetch dashboard data using expert ID
+        // Fetch dashboard data using expert ID
+        try {
           const data = await fetchDashboardData(expertData.id)
           setDashboardData(data)
           const hasServiceSetup = data.services.length > 0
           setupProfile(hasServiceSetup)
           plainLocalStorage.setItem(STORAGE_KEYS.EXPERT_SETUP_PROFILE_COMPLETE, hasServiceSetup)
+        } catch (dashboardError: any) {
+          // Handle 401/403 errors from dashboard API calls
+          if (dashboardError.status === 401 || dashboardError.status === 403) {
+            removeAuthToken()
+            toast({
+              title: "Authentication required",
+              description: "Please log in again to access your dashboard.",
+              variant: "destructive",
+            })
+            router.push("/login")
+            return
+          }
+          // For other errors, log but continue with empty data
+          logger.error("Dashboard data fetch error:", dashboardError)
         }
-      } catch (error) {
+      } catch (error: any) {
         logger.error("Auth check error:", error)
+        // Handle authentication errors
+        if (error.status === 401 || error.status === 403) {
+          removeAuthToken()
+          toast({
+            title: "Authentication required",
+            description: "Please log in again to access your dashboard.",
+            variant: "destructive",
+          })
+        }
         router.push("/login")
       } finally {
         setIsLoading(false)
@@ -84,7 +121,7 @@ export default function DashboardPage() {
     }
 
     checkAuth()
-  }, [router])
+  }, [router, toast])
 
   const handleSetupStep = (stepId: string) => {
     switch (stepId) {

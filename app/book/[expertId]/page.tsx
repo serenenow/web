@@ -712,24 +712,35 @@ export default function ClientBookingPage({ params }: ClientBookingPageProps) {
                         ))}
                       </select>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      {availableTimeSlots.map((timeSlot) => (
-                        <button
-                          key={timeSlot.time}
-                          onClick={() => handleTimeSelect(timeSlot.time, timeSlot)}
-                          disabled={!timeSlot.available}
-                          className={`p-3 rounded-lg border text-center transition-colors ${
-                            selectedTime === timeSlot.time
-                              ? "border-mint-dark bg-mint-dark text-white"
-                              : timeSlot.available
-                                ? "border-gray-200 hover:border-mint-dark hover:bg-mint/5"
-                                : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          {timeSlot.time}
-                        </button>
-                      ))}
-                    </div>
+                    
+                    {!slotsLoading && availableTimeSlots.length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-charcoal/70 text-sm">
+                          Sorry, no time slots are available for the selected date. Please try a different date.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {availableTimeSlots.length > 0 && (
+                      <div className="grid grid-cols-3 gap-3">
+                        {availableTimeSlots.map((timeSlot) => (
+                          <button
+                            key={timeSlot.time}
+                            onClick={() => handleTimeSelect(timeSlot.time, timeSlot)}
+                            disabled={!timeSlot.available}
+                            className={`p-3 rounded-lg border text-center transition-colors ${
+                              selectedTime === timeSlot.time
+                                ? "border-mint-dark bg-mint-dark text-white"
+                                : timeSlot.available
+                                  ? "border-gray-200 hover:border-mint-dark hover:bg-mint/5"
+                                  : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
+                            }`}
+                          >
+                            {timeSlot.time}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 

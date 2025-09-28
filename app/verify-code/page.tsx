@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { verifyCode, sendVerificationCode, setAuthToken, setExpertData } from "@/lib/api/auth"
+import { clearAllStorage } from "@/lib/utils/secure-storage"
 import { logger } from "@/lib/utils/logger"
 
 export default function VerifyCodePage() {
@@ -85,7 +86,10 @@ export default function VerifyCodePage() {
     try {
       const response = await verifyCode(email, code)
 
-      // Store the access token and expert data
+      // Clear all previous storage before saving new auth data
+      clearAllStorage()
+      
+      // Store the new access token and expert data
       setAuthToken(response.accessToken)
       setExpertData(response.expert)
 

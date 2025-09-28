@@ -2,7 +2,7 @@
 import { addCSRFToken, refreshCSRFToken, API_BASE_URL, API_DEBUG } from "@/lib/utils/csrf-protection"
 import { logger } from "@/lib/utils/logger"
 import { processApiResponse, handleFetchError, ApiResponse } from "@/lib/utils/api-response"
-import { STORAGE_KEYS } from "@/lib/utils/secure-storage"
+import { STORAGE_KEYS, clearAllStorage } from "@/lib/utils/secure-storage"
 
 /**
  * Converts a camelCase string to snake_case
@@ -93,6 +93,30 @@ export class CSRFError extends Error {
   constructor(message: string = "Please refresh the page and try again.") {
     super(message)
     this.name = "CSRFError"
+  }
+}
+
+/**
+ * Handles unauthorized (401) errors globally
+ * Clears auth storage and redirects to login page with error message
+ */
+async function handleUnauthorizedError(): Promise<void> {
+  if (typeof window === 'undefined') {
+    return // Skip on server-side
+  }
+
+  try {
+    // Clear all authentication data using the centralized method
+    clearAllStorage()
+    
+    // Redirect to login page with error message in URL parameter
+    const errorMessage = encodeURIComponent("Your session has expired. Please log in again.")
+    window.location.href = `/login?error=${errorMessage}`
+    
+  } catch (error) {
+    logger.error('Error handling unauthorized request:', error)
+    // Fallback: still try to redirect
+    window.location.href = '/login'
   }
 }
 
@@ -239,7 +263,13 @@ async function makeRequestWithCSRFRetry<T>(endpoint: string, options: RequestIni
         }
       }
       
-      throw new Error(errorMessage);
+      // Global 401 handler - redirect to login for any unauthorized request
+      if (apiResponse.status === 401) {
+        await handleUnauthorizedError();
+        throw new ApiError(apiResponse.status, "Your session has expired. Please log in again.");
+      }
+      
+      throw new ApiError(apiResponse.status, errorMessage);
     }
     
     // If there's no data, return an empty object
@@ -264,6 +294,16 @@ async function makeRequestWithCSRFRetry<T>(endpoint: string, options: RequestIni
       logger.error("API Error:", errorResponse.error)
     }
     
-    throw new Error(errorResponse.error?.message || "An unknown error occurred")
+    // Global 401 handler for network errors that contain status code
+    if (errorResponse.status === 401) {
+      await handleUnauthorizedError();
+      throw new ApiError(errorResponse.status, "Your session has expired. Please log in again.");
+    }
+    
+    // Throw ApiError with status code for network errors (status 0 means network error)
+    throw new ApiError(
+      errorResponse.status, 
+      errorResponse.error?.message || "An unknown error occurred"
+    )
   }
 }
