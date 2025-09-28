@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -13,13 +13,33 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { sendVerificationCode, getAuthToken, getExpertData, validateAuthToken } from "@/lib/api/auth"
 import { logger } from "@/lib/utils/logger"
 
-export default function LoginPage() {
+// Component to handle search params
+function ErrorHandler({ setErrorMessage }: { setErrorMessage: (message: string) => void }) {
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (!searchParams) return
+    
+    const urlErrorMessage = searchParams.get("error")
+    if (urlErrorMessage) {
+      setErrorMessage(decodeURIComponent(urlErrorMessage))
+      
+      // Clean up the URL by removing the error parameter
+      const url = new URL(window.location.href)
+      url.searchParams.delete("error")
+      window.history.replaceState({}, "", url.pathname)
+    }
+  }, [searchParams, setErrorMessage])
+
+  return null
+}
+
+function LoginPageContent() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [errorMessage, setErrorMessage] = useState("")
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   // Check if user is already authenticated
   useEffect(() => {
@@ -53,20 +73,6 @@ export default function LoginPage() {
     checkExistingAuth()
   }, [router])
 
-  // Check for error message in URL parameters and display it
-  useEffect(() => {
-    if (!searchParams) return
-    
-    const urlErrorMessage = searchParams.get("error")
-    if (urlErrorMessage) {
-      setErrorMessage(decodeURIComponent(urlErrorMessage))
-      
-      // Clean up the URL by removing the error parameter
-      const url = new URL(window.location.href)
-      url.searchParams.delete("error")
-      window.history.replaceState({}, "", url.pathname)
-    }
-  }, [searchParams])
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -130,6 +136,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light flex items-center justify-center p-4">
+      <Suspense fallback={null}>
+        <ErrorHandler setErrorMessage={setErrorMessage} />
+      </Suspense>
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -230,5 +239,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-mint-light via-white to-lavender-light flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-mint-dark border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-charcoal/70">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }
